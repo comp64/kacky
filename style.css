@@ -1,0 +1,204 @@
+body {
+	position: relative;
+  margin: 0px;
+  padding: 0px;
+  font-family: "Verdana";
+  background-color: #FFF;
+  min-width: 1232px;
+  min-height: 717px;
+}
+
+.warn {
+  color: #FF0000;
+}
+
+.ok {
+  color: #00FF00;
+}
+
+td.column1 {
+	width: 100%;
+	vertical-align: top;
+}
+
+td.column2 {
+	width: 300px;
+	vertical-align: top;
+}
+
+div.menicko {
+  padding-left: 10px;
+  background-color: #FFF;
+}
+
+div.statusbar {
+  background-color: #FFF;
+  border-bottom: 3px solid black;
+}
+
+div.river {
+	position: relative;
+  text-align: center;
+  margin: 30px auto 0px auto;
+  width: 972px;
+  height: 200px;
+}
+
+div.any-card {
+	z-index: 1;
+	position: relative;
+  float: left;
+  background-color: #FFF;
+  margin: 0px 2px 0px 2px;
+  border: 4px solid black;
+  border-radius: 10px;
+  width: 150px;
+  height: 150px;
+}
+
+div.pile-card, div.deck-card {
+	position: relative;
+  background-color: #FFF;
+  margin: 10px auto 10px auto;
+  border: 4px solid black;
+  border-radius: 10px;
+  width: 150px;
+  height: 150px;
+}
+
+div.deck-card {
+	z-index: 50;
+	background-image: url('i/card_back.png');
+	background-size: 150px;
+}
+
+img.duck, img.actioncard {
+	width: 150px;
+}
+
+img.target {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 150px;
+	z-index: 100;
+}
+
+img.miniduck {
+	position: absolute;
+	left: 100px;
+	top: 3px;
+	width: 48px;
+	z-index: 20;
+}
+
+div.pile {
+  clear: left;
+  float: left;
+  width: 25%;
+}
+
+div.deck {
+  float: left;
+  width: 25%;
+}
+
+div.hand {
+  float: left;
+  width: 50%;
+  height: 250px;
+}
+
+div.hand-inner {
+	position: relative;
+  margin: 90px auto 0px;
+  width: 486px;
+}
+
+div.possible_move {
+  border: 4px solid red !important;
+}
+
+div.selected_move {
+	border: 4px solid #00AA00 !important;
+}
+
+div.debug {
+	clear: both;
+}
+
+div.message-box {
+	width: 286px;
+	height: 450px;
+	margin: 30px 5px 0px 5px;
+	padding: 5px;
+	background-color: #FFF;
+	border: 2px solid black;
+	overflow-y: auto;
+}
+
+div.message-box div {
+	font-size: 12px;
+	margin: 4px 0px;
+}
+
+div.message-input {
+	width: 296px;
+	margin: 5px 5px 0px 5px;
+}
+
+#message-input {
+  padding: 2px;
+	border: 2px solid black;
+	width: 292px;
+}
+
+span.has-move {
+  border-bottom: 4px solid red;
+}
+
+span.this-player {
+	color: red;
+}
+
+table.lives {
+  width: 100%;
+}
+
+.duck-lives {
+}
+
+.player {
+  padding: 20px;
+  font-size: 26px;
+  width: 16.66%;
+  text-align: center;
+}
+
+.duck-lives img {
+  margin-top: 5px;
+}
+
+.placeholder {
+	visibility: hidden;
+}
+
+table.simple {
+  border-collapse: collapse;
+  border: 1px solid black;
+}
+
+table.simple td,th {
+  border: 1px solid black;
+  padding: 4px 8px;
+}
+
+/* message colors */
+span.msg-col0 { color: #B0B; }
+span.msg-col1 { color: #0C0; }
+span.msg-col2 { color: #00F; }
+span.msg-col3 { color: #F80; }
+span.msg-col4 { color: #FFC300; }
+span.msg-col5 { color: #F4F; }
+
+span.msg-sys0 { color: #000; }
