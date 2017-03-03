@@ -1,32 +1,48 @@
 <?php
+use Comp\Kacky\DB;
+use Comp\Kacky\Game;
+
 session_name('kacicky');
 session_cache_limiter('nocache');
 session_start();
 
-spl_autoload_register(function($classname) {
-  $filename = './class_'.strtolower($classname).'.php';
-  include_once($filename);
-});
+include('vendor/autoload.php');
 
 function log_message($gid, $uid, $cmd=0, $data=false) {
 	if (!is_array($data)) $m_data='';
 	else $m_data=base64_encode(serialize($data));
 	
-	DB::q("INSERT INTO message SET g_id=$gid, m_cmd=$cmd, m_data='$m_data', m_ts=NOW(), u_id=$uid");
+	DB::getInstance()->q(
+	  "INSERT INTO message
+    SET g_id=?, m_cmd=?, m_data=?, m_ts=NOW(), u_id=?",
+    ['iisi', $gid, $cmd, $m_data, $uid]
+  );
 }
 
 function read_messages($gid, $uid, $epoch) {
-	$msg_packet=array();
+	$db = DB::getInstance();
+  $msg_packet=array();
 	
 	// first update, epoch is not known
 	// skip all messages and announce current epoch as new
 	if ($epoch==0) {
-		$new_epoch=DB::getval("SELECT COALESCE(MAX(m_id), 0) FROM message WHERE g_id=$gid");
+		$new_epoch=$db->getval(
+		  "SELECT COALESCE(MAX(m_id), 0)
+      FROM message
+      WHERE g_id=?",
+      ['i', $gid]
+    );
 		$msg_packet[]=array('id'=>$new_epoch*1, 'cmd'=>3);
 	} else {
 		// get messages for this game (gid), not originating from this player self (uid), newer than epoch
 		// do not fetch more than 10 for effectivity reasons
-		$res=DB::q("SELECT m_id, m_cmd, m_data, u_id=$uid AS self FROM message WHERE g_id=$gid AND m_id > $epoch ORDER BY m_id LIMIT 10");
+		$res=$db->q(
+		  "SELECT m_id, m_cmd, m_data, u_id=? AS self
+      FROM message
+      WHERE g_id=? AND m_id > ?
+      ORDER BY m_id LIMIT 10",
+      ['iii', $uid, $gid, $epoch]
+    );
 		while($row=$res->fetch_row()) {
 			// some headers
 			$msg=array('id'=>$row[0]*1, 'cmd'=>$row[1]*1, 'self'=>$row[3]*1);
@@ -49,7 +65,12 @@ function refresh($gid, $uid, $epoch) {
 	global $abort_packet;
 	header('Content-Type: application/json');
 	
-	$row=DB::getrow("SELECT g_data, g_active, g_title FROM game_kacky WHERE g_id=$gid");
+	$row=DB::getInstance()->getrow(
+	  "SELECT g_data, g_active, g_title
+    FROM game_kacky
+    WHERE g_id=?",
+    ['i', $gid]
+  );
 	if (is_null($row)) {
 		echo $abort_packet;
 		exit;
@@ -77,7 +98,13 @@ function before_game_state($g_title, $gid, $uid) {
 	$state['title']=$g_title;
 	$state['players'] = array();
 	
-  $players = DB::getarray("SELECT u_id, u_name, u_color FROM user2game JOIN user USING (u_id) WHERE g_id=$gid");
+  $players = DB::getInstance()->getarray(
+    "SELECT u_id, u_name, u_color
+    FROM user2game
+      JOIN `user` USING (u_id)
+    WHERE g_id=?",
+    ['i', $gid]
+  );
 	foreach($players as $k=>$p) {
 		$state['players'][$k]=array(
 			'name'=>$p['u_name'],
@@ -93,6 +120,8 @@ function before_game_state($g_title, $gid, $uid) {
 
 header('Content-Type: text/plain');
 
+$db = DB::getInstance();
+
 foreach(array('gid'=>0, 'card_id'=>-1, 'param0'=>-1, 'param1'=>-1, 'color'=>-1, 'epoch'=>-1) as $k=>$v) {
   if (isset($_GET[$k])) $$k = $_GET[$k]*1;
   elseif (isset($_POST[$k])) $$k = $_POST[$k]*1;
@@ -100,8 +129,8 @@ foreach(array('gid'=>0, 'card_id'=>-1, 'param0'=>-1, 'param1'=>-1, 'color'=>-1, 
 }
 
 foreach(array('cmd'=>'nop', 'title'=>'', 'param2'=>'') as $k=>$v) {
-  if (isset($_GET[$k])) $$k = DB::escape($_GET[$k]);
-  elseif (isset($_POST[$k])) $$k = DB::escape($_POST[$k], true);
+  if (isset($_GET[$k])) $$k = $db->escape($_GET[$k]);
+  elseif (isset($_POST[$k])) $$k = $db->escape($_POST[$k], true);
   else $$k=$v;
 }
 
@@ -119,19 +148,20 @@ if ($gid) {
   if ($cmd==='r') $need_game = false; // periodic refresh is read-only, thus no need for expensive locking
 	
 	if ($need_game) {
-		DB::lock(array('game_kacky', 'user2game', 'message'), array('user', 'user2game AS u2g_sub'));
+		$db->lock(array('game_kacky', 'user2game', 'message'), array('user', 'user2game AS u2g_sub'));
 	
-		$game=DB::getrow(
+		$game=$db->getrow(
 		  "SELECT g_title, g_players, g_data, g_count, g_active, u_color, u_id IS NOT NULL AS in_game
 			FROM game_kacky
-			LEFT JOIN user2game ON game_kacky.g_id=user2game.g_id AND u_id=$uid
+			LEFT JOIN user2game ON game_kacky.g_id=user2game.g_id AND u_id=?
 			LEFT JOIN (
 				SELECT g_id, GROUP_CONCAT(u_name SEPARATOR ', ') AS g_players, COUNT(*) AS g_count
 				FROM user2game AS u2g_sub
 				JOIN user USING (u_id)
 				GROUP BY g_id
 			) AS t2 ON game_kacky.g_id=t2.g_id
-			WHERE (g_active=0 OR u_id IS NOT NULL) AND game_kacky.g_id=$gid"
+			WHERE (g_active=0 OR u_id IS NOT NULL) AND game_kacky.g_id=?",
+      ['ii', $uid, $gid]
 		);
 
     if (is_null($game))	exit();
@@ -146,7 +176,11 @@ switch($cmd) {
     if ($game['g_active']) break;
 		if ($game['g_count'] >= Game::P_MAX) break;
     
-    DB::q("INSERT IGNORE INTO user2game SET u_id=$uid, g_id=$gid");
+    $db->q(
+      "INSERT IGNORE INTO user2game
+      SET u_id=?, g_id=?",
+      ['ii', $uid, $gid]
+    );
     log_message($gid, $uid, 11);
     
     refresh($gid, $uid, $epoch);
@@ -157,7 +191,7 @@ switch($cmd) {
     if (!$game['in_game']) break;
     if ($game['g_active']) break;
 
-    DB::q("DELETE FROM user2game WHERE u_id=$uid AND g_id=$gid");
+    $db->q("DELETE FROM user2game WHERE u_id=$uid AND g_id=$gid");
     log_message($gid, $uid, 11);
     break;
 
@@ -166,18 +200,23 @@ switch($cmd) {
     if (!$game['in_game']) break;
     if ($game['g_active']) break;
     
-    $players = DB::getarray2("SELECT u_name, u_color FROM user JOIN user2game USING (u_id) WHERE g_id=$gid");
+    $players = $db->getarray2("SELECT u_name, u_color FROM user JOIN user2game USING (u_id) WHERE g_id=$gid");
     
     $kacky = new Game($players);
-    
-    DB::q("UPDATE game_kacky SET g_active=1, g_data='".base64_encode(serialize($kacky))."' WHERE g_id=$gid");
+
+    $db->q(
+      "UPDATE game_kacky
+      SET g_active=1, g_data=?
+      WHERE g_id=?",
+      ['si', base64_encode(serialize($kacky)), $gid]
+    );
     log_message($gid, $uid, 10);
     break;
   
 	case 'game_new':
-		DB::q("INSERT INTO game_kacky SET g_title='$title', g_ts=NOW(), g_data=''");
+    $db->q("INSERT INTO game_kacky SET g_title='$title', g_ts=NOW(), g_data=''");
 		$gid = DB::getInstance()->insert_id;
-    DB::q("INSERT INTO user2game SET u_id=$uid, g_id=$gid");
+    $db->q("INSERT INTO user2game SET u_id=$uid, g_id=$gid");
     log_message($gid, $uid, 3); // insert empty message to initialize epoch counter
     echo $gid;
     break;
@@ -187,12 +226,17 @@ switch($cmd) {
 		if (!$game['in_game']) break;
 		if (!$game['g_active']) break;
 		
-    $players = DB::getarray2("SELECT u_name, u_color FROM user JOIN user2game USING (u_id) WHERE g_id=$gid");
+    $players = $db->getarray2("SELECT u_name, u_color FROM user JOIN user2game USING (u_id) WHERE g_id=$gid");
     
     $kacky = new Game($players);
-    
-    DB::q("UPDATE game_kacky SET g_active=1, g_data='".base64_encode(serialize($kacky))."' WHERE g_id=$gid");
-    DB::q("DELETE FROM message WHERE g_id=$gid");
+
+    $db->q(
+      "UPDATE game_kacky
+      SET g_active=1, g_data=?
+      WHERE g_id=?",
+      ['si', base64_encode(serialize($kacky)), $gid]
+    );
+    $db->q("DELETE FROM message WHERE g_id=$gid");
     
     log_message($gid, $uid, 10);
 		break;
@@ -219,7 +263,12 @@ switch($cmd) {
 			if ($g->is_gameover()) $g_active=2;
 			else $g_active=1;
 			// store the new game state
-			DB::q("UPDATE game_kacky SET g_data='".base64_encode(serialize($g))."', g_active=$g_active WHERE g_id=$gid");
+      $db->q(
+        "UPDATE game_kacky
+        SET g_data=?, g_active=?
+        WHERE g_id=?",
+        ['sii', base64_encode(serialize($g)), $g_active, $gid]
+      );
 			// log messages output from the play() call
 			foreach($ret as $msg) log_message($gid, $uid, $msg['cmd'], $msg);
 			// return the new game state to the caller (GUI)
@@ -235,11 +284,11 @@ switch($cmd) {
     if ($game['g_active']) break;
 		if (($color < -1) || ($color > 5)) break;
 		
-		$count=DB::getval("SELECT COUNT(*) FROM user2game WHERE g_id=$gid AND u_color=$color AND u_id!=$uid");
+		$count=$db->getval("SELECT COUNT(*) FROM user2game WHERE g_id=$gid AND u_color=$color AND u_id!=$uid");
 		if ($count) {
-			echo DB::getval("SELECT u_color FROM user2game WHERE g_id=$gid AND u_id=$uid");
+			echo $db->getval("SELECT u_color FROM user2game WHERE g_id=$gid AND u_id=$uid");
 		} else {
-			DB::q("UPDATE user2game SET u_color=$color WHERE g_id=$gid AND u_id=$uid");
+      $db->q("UPDATE user2game SET u_color=$color WHERE g_id=$gid AND u_id=$uid");
 			echo $color;
 		}
     log_message($gid, $uid, 11);
@@ -252,7 +301,7 @@ switch($cmd) {
 		if (!$game['g_active']) break;
 		
 		log_message($gid, $uid, 100, array(
-			'text'=>'<span class="msg-col'.$game['u_color'].'">'.htmlentities($_SESSION['uname'].': '.DB::mq_remove($title)).'</span>'
+			'text'=>'<span class="msg-col'.$game['u_color'].'">'.htmlentities($_SESSION['uname'].': '.$db->mq_remove($title)).'</span>'
 		));
 		break;
 		
@@ -265,4 +314,3 @@ switch($cmd) {
   default: break;
 }
 exit();
-?>

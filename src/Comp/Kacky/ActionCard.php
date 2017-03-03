@@ -1,4 +1,6 @@
 <?php
+namespace Comp\Kacky;
+
 class ActionCard {
 	private $id;
 	private $name;
@@ -31,11 +33,11 @@ class ActionCard {
 	/**
 	 * Constructs the instance of the action card based.
 	 * 
-	 * @param Integer $id of the action card
+	 * @param int $id of the action card
 	 */
 	function __construct($id) {
 		if ($id < 0 || $id > 15) {
-			return false;
+			return;
 		}
 		$this->id = $id;
 		

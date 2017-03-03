@@ -1,4 +1,6 @@
 <?php
+namespace Comp\Kacky;
+
 class Stack {
 	private $items;
 	

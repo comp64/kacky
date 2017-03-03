@@ -1,4 +1,6 @@
 <?php
+namespace Comp\Kacky;
+
 class Queue {
 	private $items;
 	
@@ -9,7 +11,6 @@ class Queue {
 	/**
 	 * removes the object at the bottom of this queue and returns that object as the value of this function.
 	 * 
-	 * @param
 	 * @return object
 	 */
 	public function get() {
@@ -19,7 +20,7 @@ class Queue {
 	/**
 	 * adds item to the top of this queue
 	 * 
-	 * @param array $item bla
+	 * @param object $item bla
 	 */
 	public function add($item) {
 		if (is_null($item)) {

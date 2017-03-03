@@ -1,5 +1,9 @@
 <?php
+use Comp\Kacky\GUI;
+use Comp\Kacky\DB;
+
 $_escape_int=array('gid'=>0, 'debug'=>0);
+include('vendor/autoload.php');
 include('header.php');
 
 $ui = new GUI();
@@ -19,16 +23,25 @@ function game_new() {
 }
 </script>
 <?php
-
+$db = DB::getInstance();
 $uid=$_SESSION['uid'];
 if ($gid==0) { // no game selected
 
 	// cleanup inactive games after 60 minutes since creation
-	DB::q("DELETE FROM game_kacky WHERE g_active=0 AND TIMESTAMPDIFF(MINUTE, g_ts, NOW()) > 60");
+	$db->q("DELETE FROM game_kacky WHERE g_active=0 AND TIMESTAMPDIFF(MINUTE, g_ts, NOW()) > 60");
 	// cleanup active games after 1 day since last activity, and finished games after 30 minutes since last activity
-	DB::q("DELETE FROM game_kacky USING game_kacky LEFT JOIN (SELECT g_id, COALESCE(TIMESTAMPDIFF(MINUTE, MAX(m_ts), NOW()), 10000) AS age FROM message GROUP BY g_id) AS t2 USING (g_id) WHERE (g_active=1 AND age > 1440) OR (g_active=2 AND age > 30)");
+	$db->q(
+	  "DELETE FROM game_kacky
+    USING game_kacky
+      LEFT JOIN (
+        SELECT g_id, COALESCE(TIMESTAMPDIFF(MINUTE, MAX(m_ts), NOW()), 10000) AS age
+        FROM message
+        GROUP BY g_id
+      ) AS t2 USING (g_id)
+    WHERE (g_active=1 AND age > 1440) OR (g_active=2 AND age > 30)"
+  );
 
-	$res=DB::q(
+	$res=$db->q(
 	  "SELECT game_kacky.g_id, g_title, g_players, g_active, u_id IS NOT NULL AS in_game
 		FROM game_kacky
 		LEFT JOIN user2game ON game_kacky.g_id=user2game.g_id AND u_id=$uid
@@ -63,7 +76,7 @@ if ($gid==0) { // no game selected
 	echo '<br><button onclick="game_new()">Nová hra</button>';
 	echo '</div>';
 } else { // game selected
-  $row=DB::getrow(
+  $row=$db->getrow(
     "SELECT g_count, g_active, g_data, u_id IS NOT NULL AS in_game
 		FROM game_kacky
 		LEFT JOIN user2game ON game_kacky.g_id=user2game.g_id AND u_id=$uid

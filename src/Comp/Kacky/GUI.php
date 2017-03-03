@@ -1,11 +1,20 @@
 <?php
+namespace Comp\Kacky;
+
 class GUI {
 public function show_game($gid, $player_id) {
+  $db = DB::getInstance();
+
 	if ($player_id==-1) $active=0;
 	else $active=1;
 	
 	if ($_SESSION['debug']) {
-		$g_data = DB::getval("SELECT g_data FROM game_kacky WHERE g_id=$gid");
+		$g_data = $db->getval(
+		  "SELECT g_data
+      FROM game_kacky
+      WHERE g_id=?",
+      ['i', $gid]
+    );
 		var_dump($_SESSION);
 		var_dump(unserialize(base64_decode($g_data)));
 	}
@@ -992,7 +1001,13 @@ $(function() {
 			
 		// text messaging
 		echo '<div id="message-box" class="message-box">';
-		$res=DB::q("SELECT m_data FROM message WHERE g_id=$gid AND m_cmd=100 ORDER BY m_id");
+		$res = $db->q(
+		  "SELECT m_data
+      FROM message
+      WHERE g_id=? AND m_cmd=100
+      ORDER BY m_id",
+      ['i', $gid]
+    );
 		while($row=$res->fetch_row()) {
 			if (!strlen($row[0])) continue;
 			$rdata=unserialize(base64_decode($row[0]));
@@ -1045,4 +1060,3 @@ $(function() {
  * 102 Unprotect duck (int[] positions) {end of KACHNI_UNIK}
  * 
  */
-?>

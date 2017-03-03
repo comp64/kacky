@@ -1,5 +1,10 @@
 <?php
+namespace Comp\Kacky;
+
 class Game {
+  /**
+   * @var array[Player]
+   */
 	private $players;
 	private $table;
 	private $activePlayer;
@@ -10,7 +15,7 @@ class Game {
 	/**
 	 * Constructs the instance of game.
 	 *
-	 * @param Array $players
+	 * @param array $players
 	 *        	of players
 	 */
 	function __construct($players) {
@@ -53,6 +58,7 @@ class Game {
 	private function move_active_player() {
 		$this->activePlayer = ($this->activePlayer + 1) % count ( $this->players );
 	}
+
 	public function get_player_id_by_name($name) {
 		foreach ( $this->players as $id => $player ) {
 			if ($name === $player->get_name ()) {
@@ -61,9 +67,11 @@ class Game {
 		}
 		return false;
 	}
+
 	public function is_gameover() {
 		return $this->gameOver;
 	}
+
 	private function get_player_name_by_river_pos($pos) {
 		$duck = $this->table->get_ducks_on_board () [$pos];
 		if ($duck->get_features () == Duck::DUCK)
@@ -88,8 +96,9 @@ class Game {
 	 *        	playing the action card
 	 * @param ActionCard $cardInHand
 	 *        	to be played
-	 * @param Array $params
+	 * @param array $params
 	 *        	holds the information about the target duck and action card parameters needed to play
+   * @return bool
 	 */
 	private function validate($player, $cardInHand, $params) {
 		$myColor = $player->get_color ();
@@ -283,9 +292,9 @@ class Game {
 	/**
 	 * Returns whether the duck on the board is player's.
 	 *
-	 * @param Player $playerColor
+	 * @param int $playerColor
 	 *        	color of the duck on the table
-	 * @param Integer $idx
+	 * @param int $idx
 	 *        	of the duck on the table
 	 */
 	private function is_mine($playerColor, $idx) {
@@ -305,9 +314,9 @@ class Game {
 	/**
 	 * Returns the possible moves to the player.
 	 *
-	 * @param Integer $player_id
+	 * @param int $player_id
 	 *        	on turn
-	 * @return Array $moves possible moves
+	 * @return array $moves possible moves
 	 */
 	private function get_possible_moves($player_id) {
 		$player = $this->players [$player_id];
@@ -371,8 +380,8 @@ class Game {
 	
 	/**
 	 *
-	 * @param unknown $playerId        	
-	 * @param unknown $cardInHandId        	
+	 * @param int $playerId
+	 * @param int $cardInHandId
 	 */
 	private function use_card($playerId, $cardInHandId) {
 		$this->table->get_card_trash ()->push ( $this->players [$playerId]->remove_card_from_hand ( $cardInHandId ) );
@@ -387,9 +396,10 @@ class Game {
 
 	/**
 	 *
-	 * @param unknown $playerId        	
-	 * @param unknown $cardInHandId        	
-	 * @param unknown $params        	
+	 * @param int $playerId
+	 * @param int $cardInHandId
+	 * @param array $param
+   * @return bool|array
 	 */
 	public function play($playerId, $cardInHandId, $param) {
 		$player = $this->players [$playerId];
@@ -415,7 +425,7 @@ class Game {
 			$this->table->set_card_trash ();
 		}
 	
-	        if (!$this->could_be_played($playerId, $cardInHandId, $param)) {
+    if (!$this->could_be_played($playerId, $cardInHandId, $param)) {
 		  return false;
 		}
 
@@ -789,6 +799,7 @@ class Game {
 		
 		return $state;
 	}
+
 	public function debug_counts() {
 		$action_cards_hand = 0;
 		$lives = 0;
@@ -820,4 +831,3 @@ class Game {
 		);
 	}
 }
-?>

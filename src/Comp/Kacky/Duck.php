@@ -1,7 +1,12 @@
 <?php
+namespace Comp\Kacky;
+
 class Duck {
 	private $color;
 	private $protection;
+  /**
+   * @var ActionCard|Duck
+   */
 	private $card;
 	
 	// duck features constants
@@ -34,9 +39,9 @@ class Duck {
 	 * $prot = 0, the duck is unprotected and can be killed
 	 * $prot >= 1, determines the number of protection turns
 	 *
-	 * @param Card/Duck $card
+	 * @param ActionCard|Duck $card
 	 *        	card to put on the current duck
-	 * @param Integer $prot
+	 * @param int $prot
 	 *        	the length of the protection
 	 */
 	public function set_protection($card, $prot) {

@@ -1,4 +1,6 @@
 <?php
+namespace Comp\Kacky;
+
 class Table {
 	private $ducksOnBoard;
 	private $ducksInDeck;
@@ -13,7 +15,7 @@ class Table {
 	/**
 	 * creates the instance of the board with initial values depending on the number of players
 	 *
-	 * @param Array $players
+	 * @param array $players
 	 *        	who participate in the game
 	 */
 	function __construct($players) {
@@ -58,8 +60,8 @@ class Table {
 				14 => 10,
 				15 => 12 
 		);
-		
-		$__allActionCards = array (
+/*
+		$allActionCards = array (
 				0 => 1,
 				1 => 1,
 				2 => 1,
@@ -77,7 +79,7 @@ class Table {
 				14 => 3,
 				15 => 2 
 		);
-		
+*/
 		foreach ( $allActionCards as $id => $num ) {
 			for($i = 0; $i < $num; $i ++) {
 				$this->cardPile->push ( new ActionCard ( $id ) );
@@ -88,7 +90,7 @@ class Table {
 	/**
 	 * Returns the array of ducks on board.
 	 *
-	 * @return Array $ducksOnBoard array of ducks on this board
+	 * @return array[Duck] $ducksOnBoard array of ducks on this board
 	 */
 	public function get_ducks_on_board() {
 		return $this->ducksOnBoard;
@@ -115,7 +117,7 @@ class Table {
 	/**
 	 * Returns the ducks in the deck.
 	 *
-	 * @return Array $ducksInDeck all ducks in the side deck
+	 * @return Queue $ducksInDeck all ducks in the side deck
 	 */
 	public function get_ducks_in_deck() {
 		return $this->ducksInDeck;
@@ -124,7 +126,7 @@ class Table {
 	/**
 	 * Returns the stack of cards in the pile.
 	 *
-	 * @return Array $cardPile action cards in the side deck
+	 * @return Stack $cardPile action cards in the side deck
 	 */
 	public function get_card_pile() {
 		return $this->cardPile;
@@ -137,7 +139,7 @@ class Table {
 	/**
 	 * Returns the stack of cards in the trash.
 	 *
-	 * @return Array $cardTrash the stack of already used action cards
+	 * @return Stack $cardTrash the stack of already used action cards
 	 */
 	public function get_card_trash() {
 		return $this->cardTrash;
@@ -146,9 +148,9 @@ class Table {
 	/**
 	 * Returns whether the position on board is targeted.
 	 *
-	 * @param Integer $idx
+	 * @param int $idx
 	 *        	the index of the position on this board
-	 * @return Boolean true if the position on this board is targeted
+	 * @return bool true if the position on this board is targeted
 	 */
 	public function is_targeted($idx) {
 		return $this->targeted [$idx];
@@ -157,9 +159,9 @@ class Table {
 	/**
 	 * Targets or detargets the place on the board.
 	 *
-	 * @param Integer $idx
+	 * @param int $idx
 	 *        	the index of the position on this board
-	 * @param Boolean $bool
+	 * @param bool $bool
 	 *        	to target or detarget this position
 	 */
 	public function set_target($idx, $bool) {
@@ -169,10 +171,11 @@ class Table {
 	/**
 	 * Removes the duck from the board and either places it again onto the deck or discards.
 	 *
-	 * @param Integer $idx
+	 * @param int $idx
 	 *        	the index of the position on this board
-	 * @param Boolean $kill
+	 * @param bool $kill
 	 *        	true if the duck is to killed
+   * @return int
 	 */
 	public function remove_duck($idx, $kill) {
 		if ($kill) {
@@ -214,14 +217,16 @@ class Table {
 			$this->ducksOnBoard [$idx]->reset ();
 			$this->ducksInDeck->add ( array_splice ( $this->ducksOnBoard, $idx, 1 ) [0] );
 		}
+
+		return null;
 	}
 	
 	/**
 	 * Switches two ducks on the board.
 	 *
-	 * @param Integer $idx1
+	 * @param int $idx1
 	 *        	the index of the first duck to switch
-	 * @param Integer $idx2
+	 * @param int $idx2
 	 *        	the index of the first duck to switch
 	 */
 	public function swap_ducks($idx1, $idx2) {
@@ -233,7 +238,7 @@ class Table {
 	/**
 	 * Permutates the ducks.
 	 *
-	 * @param Array $permutation
+	 * @param array $permutation
 	 *        	permutation of the ducks
 	 */
 	public function reorder_ducks($permutation) {
@@ -267,10 +272,12 @@ class Table {
 	/**
 	 * Places a card onto the duck
 	 *
-	 * @param Integer $idx
+	 * @param int $idx
 	 *        	the index of the target duck
-	 * @param Card/Duck $card
+	 * @param ActionCard|Duck $card
 	 *        	the card to be placed on the indexed duck
+   * @param int $prot
+   * @return bool
 	 */
 	public function put_card_on_duck($idx, $card, $prot) {
 		if (is_null($this->ducksOnBoard [$idx]->get_card ())) {

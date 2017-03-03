@@ -1,11 +1,10 @@
 <?php
+use Comp\Kacky\DB;
+
 session_name('kacicky');
 session_start();
 
-spl_autoload_register(function($classname) {
-  $filename = './class_'.strtolower($classname).'.php';
-  include_once($filename);
-});
+$db = DB::getInstance();
 
 function redirect($url) {
   echo "<script>window.location.replace('".$url."')</script>";
@@ -16,9 +15,14 @@ function on_shutdown() {
 }
 
 if (isset($_POST['lsub'])) { // form was sent
-  $uname=DB::escape($_POST['uname']);
-  $upass=DB::escape($_POST['upass']);
-  $u_id=DB::getval("SELECT u_id FROM user WHERE u_name='$uname' AND u_pass=SHA1('$uname:game:$upass')");
+  $uname=$db->escape($_POST['uname']);
+  $upass=$db->escape($_POST['upass']);
+  $u_id=$db->getval(
+    "SELECT u_id
+    FROM `user`
+    WHERE u_name=? AND u_pass=?",
+    ['ss', $uname, sha1($uname.':game:'.$upass)]
+  );
   if (!is_null($u_id)) {
     $_SESSION['login']=1;
     $_SESSION['uid']=$u_id;
@@ -58,6 +62,7 @@ $_SESSION['debug'] = $debug;
 <body>
 <?php
 register_shutdown_function('on_shutdown');
+echo '<p>Development verzia [websocket]</p>';
 
 if (!isset($_SESSION['login']) || !$_SESSION['login']) {
   echo '<p>';
@@ -77,4 +82,3 @@ echo '<a href="?logout=1">Logout</a>&nbsp;&nbsp;';
 echo '<a href="?">Zoznam hier</a>';
 echo '</div>';
 // content
-?>

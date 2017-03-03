@@ -1,7 +1,12 @@
 <?php
+namespace Comp\Kacky;
+
 class Player {
 	private $color;
 	private $name;
+  /**
+   * @var array[ActionCard]
+   */
 	private $hand;
 	private $lives;
 	const COLOR_WATER = - 1;
@@ -14,8 +19,8 @@ class Player {
 	
 	/**
 	 *
-	 * @param String $name        	
-	 * @param Intger $color        	
+	 * @param string $name
+	 * @param int $color
 	 */
 	function __construct($name, $color) {
 		if ($color < 0 || $color > 5) {
@@ -43,8 +48,9 @@ class Player {
 		return $this->color;
 	}
 	
-	/*
+	/**
 	 * function 'getHand' returns the hand of the player
+   * @return array[ActionCard]
 	 */
 	public function get_hand() {
 		return $this->hand;
@@ -57,13 +63,15 @@ class Player {
 	public function decrease_lives() {
 		$this->lives --;
 	}
-	
-	/*
+
+	/**
 	 * function 'addCardToHand' adds a card from a pile to the player's hand
+   * @param ActionCard $actionCard
 	 */
 	public function add_card_to_hand($actionCard) {
 		if (count ( $this->hand ) == 3) {
-			return trigger_error ( 'Player has already 3 card in the hand' );
+			trigger_error ( 'Player has already 3 card in the hand' );
+			return;
 		}
 		
 		$this->hand [] = $actionCard;
@@ -83,4 +91,3 @@ class Player {
 		return $card;
 	}
 }
-?>
