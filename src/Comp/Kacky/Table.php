@@ -60,26 +60,7 @@ class Table {
 				14 => 10,
 				15 => 12 
 		);
-/*
-		$allActionCards = array (
-				0 => 1,
-				1 => 1,
-				2 => 1,
-				3 => 1,
-				4 => 1,
-				5 => 12,
-				6 => 2,
-				7 => 2,
-				8 => 2,
-				9 => 2,
-				10 => 10,
-				11 => 3,
-				12 => 3,
-				13 => 6,
-				14 => 3,
-				15 => 2 
-		);
-*/
+
 		foreach ( $allActionCards as $id => $num ) {
 			for($i = 0; $i < $num; $i ++) {
 				$this->cardPile->push ( new ActionCard ( $id ) );

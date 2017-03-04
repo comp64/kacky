@@ -1,14 +1,19 @@
 <?php
 namespace Comp\Kacky;
 
+use Comp\Kacky\Model\User;
+
 class Player {
 	private $color;
+	private $id;
 	private $name;
-  /**
+
+	/**
    * @var array[ActionCard]
    */
 	private $hand;
 	private $lives;
+
 	const COLOR_WATER = - 1;
 	const COLOR_VIOLET = 0;
 	const COLOR_GREEN = 1;
@@ -18,49 +23,46 @@ class Player {
 	const COLOR_PINK = 5;
 	
 	/**
-	 *
+	 * @param int $id
 	 * @param string $name
 	 * @param int $color
 	 */
-	function __construct($name, $color) {
-		if ($color < 0 || $color > 5) {
-			trigger_error ( 'Wrong color for the player.' );
-			return;
-		}
-		
-		$this->name = $name;
-		$this->color = $color;
+	function __construct(int $id, string $name, int $color) {
+	  $this->id = $id;
+	  $this->name = $name;
+	  $this->color = $color;
 		$this->lives = 5;
-		$this->hand = array ();
-	}
-	
-	/*
-	 * function 'getName' returns the name of the player
-	 */
-	public function get_name() {
-		return $this->name;
+		$this->hand = [];
 	}
 	
 	/*
 	 * function 'getColor' returns the numeric value of the color of the player
 	 */
-	public function get_color() {
+	public function getColor() {
 		return $this->color;
 	}
-	
+
+  public function getName() {
+	  return $this->name;
+  }
+
+  public function getId() {
+	  return $this->id;
+  }
+
 	/**
 	 * function 'getHand' returns the hand of the player
    * @return array[ActionCard]
 	 */
-	public function get_hand() {
+	public function getHand() {
 		return $this->hand;
 	}
 	
-	public function get_lives() {
+	public function getLives() {
 		return $this->lives;
 	}
 	
-	public function decrease_lives() {
+	public function decreaseLives() {
 		$this->lives --;
 	}
 
