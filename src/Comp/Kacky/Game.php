@@ -700,7 +700,7 @@ class Game {
 			// game-over text message
 			$messages [] = array (
 					'cmd' => 100,
-					'text' => '<span class="msg-sys0">Game over! ' . mb_strtoupper ( $winner, 'UTF-8' ) . ' je víťaz! <a href="javascript:game_restart()">*Hrať znova*</a></span>' 
+					'text' => '<span class="msg-sys0">Game over! ' . mb_strtoupper ( $winner, 'UTF-8' ) . ' je víťaz! <a href="javascript:game_start()">*Hrať znova*</a></span>'
 			);
 		}
 		

@@ -128,16 +128,6 @@ function card_play_click(card_id, param0, param1, param2) {
   });
 }
 
-// play again, vole! :)
-function game_restart() {
-	$.post('ajax.php', {
-		cmd: 'game_restart',
-		gid: gid
-	}, function(data) {
-		window.location.replace('?gid='+gid);
-	});
-}
-
 // vyber prvu kartu a ponukni druhe karty
 function card_select(card, moves, orig_card_index) {
 	// cistenie vysvietenych kariet na stole

@@ -198,9 +198,8 @@ switch($cmd) {
   case 'start':
     if (!$gid) break;
     if (!$game['in_game']) break;
-    if ($game['g_active']) break;
-    
-    $players = $db->getarray2("SELECT u_name, u_color FROM user JOIN user2game USING (u_id) WHERE g_id=$gid");
+
+    $players = $db->getarray2("SELECT u_name, u_color FROM `user` JOIN user2game USING (u_id) WHERE g_id=$gid");
     
     $kacky = new Game($players);
 
@@ -215,31 +214,11 @@ switch($cmd) {
   
 	case 'game_new':
     $db->q("INSERT INTO game_kacky SET g_title='$title', g_ts=NOW(), g_data=''");
-		$gid = DB::getInstance()->insert_id;
+		$gid = $db->insert_id;
     $db->q("INSERT INTO user2game SET u_id=$uid, g_id=$gid");
     log_message($gid, $uid, 3); // insert empty message to initialize epoch counter
     echo $gid;
     break;
-		
-	case 'game_restart':
-		if (!$gid) break;
-		if (!$game['in_game']) break;
-		if (!$game['g_active']) break;
-		
-    $players = $db->getarray2("SELECT u_name, u_color FROM user JOIN user2game USING (u_id) WHERE g_id=$gid");
-    
-    $kacky = new Game($players);
-
-    $db->q(
-      "UPDATE game_kacky
-      SET g_active=1, g_data=?
-      WHERE g_id=?",
-      ['si', base64_encode(serialize($kacky)), $gid]
-    );
-    $db->q("DELETE FROM message WHERE g_id=$gid");
-    
-    log_message($gid, $uid, 10);
-		break;
 		
   case 'play_card':
 		header('Content-Type: application/json');
