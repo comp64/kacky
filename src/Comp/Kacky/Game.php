@@ -296,6 +296,7 @@ class Game {
 	 *        	color of the duck on the table
 	 * @param int $idx
 	 *        	of the duck on the table
+   * @return bool
 	 */
 	private function is_mine($playerColor, $idx) {
 		$card = $this->table->get_ducks_on_board () [$idx];
@@ -350,7 +351,8 @@ class Game {
 		
 		$moves = array ();
 		foreach ( $player->get_hand () as $k => $cardInHand ) {
-			if ($player->get_hand () [$k]->get_id () == ActionCard::JEJDA_VEDLE || $player->get_hand () [$k]->get_id () == ActionCard::ZIVY_STIT) {
+			if ($player->get_hand () [$k]->get_id () == ActionCard::JEJDA_VEDLE ||
+          $player->get_hand () [$k]->get_id () == ActionCard::ZIVY_STIT) {
 				$moves [$k] = array ();
 				
 				for($i = 0; $i < Table::VISIBLE_DUCKS; $i ++) {
@@ -402,29 +404,26 @@ class Game {
    * @return bool|array
 	 */
 	public function play($playerId, $cardInHandId, $param) {
-		$player = $this->players [$playerId];
-		$cardInHand = $player->get_hand () [$cardInHandId];
+		$player = $this->players[$playerId];
+		$cardInHand = $player->get_hand()[$cardInHandId];
 		
 		// if active player is not on the turn
 		if ($this->activePlayer != $playerId) {
 			return false;
 		}
-		
+
 		// generated messages
-		$messages = array ();
-		
+		$messages = [];
+
 		// died ducks (to include in action message)
-		$died_ducks = array ();
-		
-		// $trash = $this->table->get_card_trash ();
-		// $pile = $this->table->get_card_pile ();
-		
+		$died_ducks = [];
+
 		// if pile is empty, shuffle the trash and put it into the pile, empty the trash
 		if ($this->table->get_card_pile ()->is_empty ()) {
 			$this->table->get_card_pile ()->set_items ( $this->table->get_card_trash ()->shuffle () );
 			$this->table->set_card_trash ();
 		}
-	
+
     if (!$this->could_be_played($playerId, $cardInHandId, $param)) {
 		  return false;
 		}
@@ -432,15 +431,15 @@ class Game {
 		if ($param [0] == 6) {
 			$this->use_card ( $playerId, $cardInHandId );
 			// message template
-			$play_message = array (
-					$player->get_name () . ' zahadzuje ' . mb_strtoupper ( $cardInHand->get_name (), 'UTF-8' ) 
-			);
+			$play_message = [
+			  sprintf('%s zahadzuje %s', $player->get_name(), mb_strtoupper( $cardInHand->get_name(), 'UTF-8' ))
+			];
 		} else {
 			// message template that fits all CLASS_SINGLE cards
-			$play_message = array (
-					$player->get_name () . ' - ' . mb_strtoupper ( $cardInHand->get_name (), 'UTF-8' ),
-					' na ' . ($param [0] + 1) . ' (' . $this->get_player_name_by_river_pos ( $param [0] ) . ')' 
-			);
+			$play_message = [
+			  sprintf('%s - %s', $player->get_name(), mb_strtoupper( $cardInHand->get_name (), 'UTF-8' )),
+        sprintf(' na %d (%s)', $param [0] + 1, $this->get_player_name_by_river_pos( $param[0] ))
+			];
 			
 			// possible moves
 			switch ($cardInHand->get_id ()) {
@@ -503,47 +502,57 @@ class Game {
 				
 				case ActionCard::DVOJITA_HROZBA :
 					// validate input parameters - no need
-					$this->table->set_target ( $param [0], true );
-					$this->table->set_target ( $param [0] + 1, true );
-					
-					$play_message [1] = ' na ' . ($param [0] + 1) . ' a ' . ($param [0] + 2) . ' (' . $this->get_player_name_by_river_pos ( $param [0] ) . ', ' . $this->get_player_name_by_river_pos ( $param [0] + 1 ) . ')';
+					$this->table->set_target ( $param[0], true );
+					$this->table->set_target ( $param[0] + 1, true );
+
+          $play_message[1] = sprintf(' na %d a %d (%s, %s)',
+            $param[0] + 1, $param[0] + 2,
+            $this->get_player_name_by_river_pos( $param[0] ), $this->get_player_name_by_river_pos( $param[0] + 1 )
+          );
 					break;
 				
 				case ActionCard::DVOJITA_TREFA :
-					$play_message [1] = ' na ' . ($param [0] + 1) . ' a ' . ($param [0] + 2) . ' (' . $this->get_player_name_by_river_pos ( $param [0] ) . ', ' . $this->get_player_name_by_river_pos ( $param [0] + 1 ) . ')';
+				  // Emit message describing the action
+					$play_message[1] = sprintf(' na %d a %d (%s, %s)',
+            $param[0] + 1, $param[0] + 2,
+            $this->get_player_name_by_river_pos( $param[0] ), $this->get_player_name_by_river_pos( $param[0] + 1 )
+          );
 
-					// validate input parameters - no need
-					if ($this->table->get_ducks_on_board () [$param [0] + 1]->get_color () != Player::COLOR_WATER) {
-						$color_right = $this->table->remove_duck ( $param [0] + 1, true );
+				  // kill the duck on the 2-nd position (if not water)
+					if ($this->table->get_ducks_on_board()[$param[0] + 1]->get_color() != Player::COLOR_WATER) {
+						$color_right = $this->table->remove_duck( $param[0] + 1, true );
 						// not tried to kill KACHNI_UNIK
-						if ($color != Player::COLOR_WATER)
-							$died_ducks [] = $param [0] + 1;
-					}
-					$this->table->set_target ( $param [0] + 1, false );
+						if ($color_right != Player::COLOR_WATER)
+							$died_ducks[] = $param[0] + 1;
+					} else {
+					  $color_right = Player::COLOR_WATER;
+          }
+					$this->table->set_target( $param[0] + 1, false );
 					
-					if ($this->table->get_ducks_on_board () [$param [0]]->get_color () != Player::COLOR_WATER) {
-						$color_left = $this->table->remove_duck ( $param [0], true );
+					if ($this->table->get_ducks_on_board() [$param[0]]->get_color() != Player::COLOR_WATER) {
+						$color_left = $this->table->remove_duck( $param[0], true );
 						// not tried to kill KACHNI_UNIK
-						if ($color != Player::COLOR_WATER)
-							$died_ducks [] = $param [0];
-					}
-					$this->table->set_target ( $param [0], false );
+						if ($color_left != Player::COLOR_WATER)
+							$died_ducks[] = $param[0];
+					} else {
+					  $color_left = Player::COLOR_WATER;
+          }
+					$this->table->set_target( $param[0], false );
 					
-					while ( count ( $this->table->get_ducks_on_board () ) < Table::VISIBLE_DUCKS ) {
-						$this->table->put_duck_on_board ();
+					while( count( $this->table->get_ducks_on_board() ) < Table::VISIBLE_DUCKS ) {
+						$this->table->put_duck_on_board();
 					}
 					
-					foreach ( $this->players as $player ) {
-						if ($player->get_color () == $color_left) {
-							$player->decrease_lives ();
+					foreach( $this->players as $player ) {
+						if ($player->get_color() == $color_left) {
+							$player->decrease_lives();
 						}
 						
-						if ($player->get_color () == $color_right) {
-							$player->decrease_lives ();
+						if ($player->get_color() == $color_right) {
+							$player->decrease_lives();
 						}
 					}
-					
-					
+
 					break;
 				
 				case ActionCard::TURBOKACHNA :
@@ -700,7 +709,7 @@ class Game {
 			// game-over text message
 			$messages [] = array (
 					'cmd' => 100,
-					'text' => '<span class="msg-sys0">Game over! ' . mb_strtoupper ( $winner, 'UTF-8' ) . ' je víťaz! <a href="javascript:game_start()">*Hrať znova*</a></span>'
+					'text' => sprintf('<span class="msg-sys0">Game over! %s je víťaz! <a href="javascript:game_start()">*Hrať znova*</a></span>', mb_strtoupper( $winner, 'UTF-8' ))
 			);
 		}
 		
