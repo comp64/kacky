@@ -1,57 +1,70 @@
 <?php
 namespace Comp\Kacky;
 
+use Comp\Kacky\Model\User;
+
 class Game {
-  /**
-   * @var array[Player]
-   */
+
+  // players in started game
 	private $players;
+
+	// game table
 	private $table;
+
+	// player, whose turn it is
 	private $activePlayer;
+
+	// is game over?
 	private $gameOver;
+
+	// users gathering for the game. these are converted to $players upon game start
+	private $waitingUsers;
+
 	const P_MIN = 2;
 	const P_MAX = 6;
 	
 	/**
 	 * Constructs the instance of game.
-	 *
-	 * @param array $players
-	 *        	of players
 	 */
-	function __construct($players) {
-		$nOP = count ( $players );
-		
-		if ($nOP < Game::P_MIN || $nOP > Game::P_MAX) {
-			trigger_error ( 'Incorrect number of players.' );
-			return;
-		}
-		
+	function __construct() {
 		// initialize private properties
 		$this->players = [];
-		foreach ( $players as $player ) {
-			$this->players[] = new Player ( $player[0], $player[1] );
-		}
-		$this->table = new Table( $this->players );
-		$this->activePlayer = rand( 0, count ( $this->players ) - 1 );
+		$this->waitingUsers = [];
 		$this->gameOver = false;
-		
-		// shuffle deck
-		$this->table->get_card_pile()->shuffle();
-		
-		// deal hands
-		foreach ( $this->players as $player ) {
-			for($i = 0; $i < 3; $i ++) {
-				$player->add_card_to_hand( $this->table->get_card_pile()->pop() );
-			}
-		}
-		
-		// shuffle ducks
-		$this->table->get_ducks_in_deck()->shuffle();
-		
-		// deal ducks
-		$this->table->deal_ducks();
-	}
-	
+  }
+
+  function start() {
+    $nOP = count($this->waitingUsers);
+
+    if ($nOP < Game::P_MIN || $nOP > Game::P_MAX) {
+      trigger_error ( 'Incorrect number of players' );
+      return;
+    }
+
+    // initialize private properties
+    foreach ($this->waiting_users as $user) {
+      $this->players[] = new Player($user['id'], $user['name'], $user['color']);
+    }
+    $this->table = new Table($this->players);
+    $this->activePlayer = rand(0, count($this->players) - 1);
+
+    // shuffle deck
+    $this->table->get_card_pile()->shuffle();
+
+    // deal hands
+    foreach ($this->players as $player) {
+      for($i = 0; $i < 3; $i ++) {
+        $player->add_card_to_hand( $this->table->get_card_pile()->pop() );
+      }
+    }
+
+    // shuffle ducks
+    $this->table->get_ducks_in_deck()->shuffle();
+
+    // deal ducks
+    $this->table->deal_ducks();
+  }
+
 	/**
 	 * Sets next player to move.
 	 */
@@ -61,12 +74,21 @@ class Game {
 
 	public function get_player_id_by_name($name) {
 		foreach ( $this->players as $id => $player ) {
-			if ($name === $player->get_name ()) {
+			if ($name === $player->getName ()) {
 				return $id;
 			}
 		}
 		return false;
 	}
+
+	private function get_player_id_by_user_id($user_id) {
+	  foreach($this->players as $id => $player) {
+	    if ($user_id == $player->getId()) {
+	      return $id;
+      }
+    }
+    return false;
+  }
 
 	public function is_gameover() {
 		return $this->gameOver;
@@ -841,4 +863,68 @@ class Game {
 			'null count' => $null_count
 		];
 	}
+
+	public function processMessage(User $user, string $cmd, array $args) {
+	  switch($cmd) {
+      case 'setColor':
+        if (!array_key_exists('color', $args)) {
+          throw new \Exception('Color required');
+        }
+
+        if (($args['color'] < -1) || ($args['color'] > 5)) {
+          throw new \Exception('Color invalid');
+        }
+
+        // check if the color is available
+        $count = 0;
+        foreach($this->waitingUsers as $waiting_user) {
+          if ($waiting_user['color'] == $args['color']) {
+            $count++;
+          }
+        }
+        if (($count > 0) && ($args['color'] != -1)) {
+          throw new \Exception('Color in use');
+        }
+
+        $this->waitingUsers[$user->getId()]['color'] = $args['color'];
+
+        throw new \Exception('OK, color changed');
+        break;
+
+      case 'gameStart':
+        $this->start();
+
+        break;
+
+      case 'cardPlay':
+        $player_id = $this->get_player_id_by_user_id($user->getId());
+        if ($player_id === false) {
+          throw new \Exception('Invalid user id');
+        }
+        break;
+
+      default:
+        throw new \Exception('Unhandled message in Comp\Kacky\Game');
+        break;
+    }
+  }
+
+  /**
+   * @return array
+   */
+  public function getWaitingUsers(): array {
+    return $this->waitingUsers;
+  }
+
+  public function addWaitingUser(int $user_id, string $name) {
+    $this->waitingUsers[$user_id] = [
+      'id' => $user_id,
+      'name' => $name,
+      'color' => -1
+    ];
+  }
+
+  public function removeWaitingUser(int $user_id) {
+    unset($this->waitingUsers[$user_id]);
+  }
 }

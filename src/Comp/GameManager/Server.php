@@ -68,67 +68,163 @@ class Server implements MessageComponentInterface {
     return $user->getId() !== null;
   }
 
+  private function gameJoin(User $user, Game $game) {
+    if ($game->userCount() > \Comp\Kacky\Game::P_MAX) {
+      throw new \Exception('Too many players');
+    }
+
+    $user->setGameId($game->getId());
+    $game->addUserId($user->getId(), $user->getName());
+  }
+
   /**
    * @param User $user
    * @param string $cmd
    * @param array $args
-   * @throws \Exception
    */
   private function processMessage(User $user, string $cmd, array $args) {
-    switch($cmd) {
-      case 'authenticate':
-        $username = $args['username'] ?? '';
-        $password = $args['password'] ?? '';
+    try {
+      switch ($cmd) {
+        case 'authenticate':
+          $username = $args['username'] ?? '';
+          $password = $args['password'] ?? '';
 
-        $user->loadFromDB(null, $username);
-        if (($user->getId() === null) || !$user->verifyPassword($password)) {
-          $user->send(Message::error('Invalid user or password'));
-        } else {
-          $user->send(Message::ok('Authenticated'));
-        }
+          $user->loadFromDB(null, $username);
+          if (($user->getId() === null) || !$user->verifyPassword($password)) {
+            $user->send(Message::error('Invalid user or password'));
+          } else {
+            // try to find out, if the user was in game
+            // put him there directly
+            $previous_game = null;
+            foreach ($this->gameList as $game_id => $game) {
+              if (array_key_exists($user->getId(), $game->getUserIds())) {
+                $user->setGameId($game_id);
+                $previous_game = $game_id;
+                break;
+              }
+            }
+            if ($previous_game !== null) {
+              $user->send(new Message(['text'=>'Authenticated in game ' . $previous_game, 'game_id'=>$previous_game]));
+            } else {
+              $user->send(Message::ok('Authenticated'));
+            }
+          }
 
-        break;
+          break;
 
-      case 'gameList':
-        if ($this->isAuthenticated($user)) {
+        case 'gameList':
+          if (!$this->isAuthenticated($user)) {
+            throw new NotLoggedInException();
+          }
+
           $game_list = [];
-          $old_game_ids = [];
-          foreach($this->gameList as $game_id => $game) {
+          //$old_game_ids = [];
+          foreach ($this->gameList as $game_id => $game) {
             if (($game->getActive() == 0) || ($user->getGameId() == $game_id)) {
               $game_list[$game_id] = [
                 'title' => $game->getTitle(),
                 'players' => [],
-                'active' => ($game->getActive()?($game->getActive()>1?'ukončená':'prebieha'):'pripravená')
+                'active' => ($game->getActive() ? ($game->getActive() > 1 ? 'ukončená' : 'prebieha') : 'pripravená')
               ];
             }
           }
 
-          foreach($this->userList as $some_user) {
+          foreach ($this->userList as $some_user) {
             $some_game_id = $some_user->getGameId();
             if ($some_game_id === null) continue;
             if (!array_key_exists($some_game_id, $game_list)) continue;
             $game_list[$some_game_id]['players'][] = $some_user->getName();
           }
 
-          $user->send(new Message('gameList', $game_list));
-        } else {
-          $user->send(Message::error('Not logged in'));
-        }
-        break;
+          $user->send(new Message(['gameList' => $game_list]));
+          break;
 
-      case 'gameNew':
-        if ($this->isAuthenticated($user)) {
-          $keys = array_keys($this->gameList);
-          $max_key = array_pop($keys);
-          $new_id = $max_key + 1;
-          if (array_key_exists($new_id, $this->gameList)) {
-            throw new \Exception('Create game failed - id already in use');
+        case 'gameNew':
+          if (!$this->isAuthenticated($user)) {
+            throw new NotLoggedInException();
           }
-          $this->gameList[$new_id] = new Game();
-        } else {
-          $user->send(Message::error('Not logged in'));
-        }
-        break;
+
+          if (!array_key_exists('title', $args)) {
+            throw new \Exception('Game title required');
+          }
+
+          $max_key = 0;
+          foreach ($this->gameList as $key => $value) {
+            if ($key > $max_key) {
+              $max_key = $key;
+            }
+          }
+          $new_id = $max_key + 1;
+          $new_game = new Game($args['title']);
+          $new_game->setId($new_id);
+          $new_game->setGame(new \Comp\Kacky\Game());
+          $this->gameList[$new_id] = $new_game;
+
+          $this->gameJoin($user, $new_game);
+
+          $user->send(new Message(['text' => 'Game created and joined', 'game_id' => $new_id]));
+          break;
+
+        case 'gameJoin':
+          if (!$this->isAuthenticated($user)) {
+            throw new NotLoggedInException();
+          }
+
+          if (!array_key_exists('game_id', $args)) {
+            throw new \Exception('Game id required');
+          }
+
+          if (!array_key_exists($args['game_id'], $this->gameList)) {
+            throw new \Exception('Game id invalid');
+          }
+
+          $joining_game = $this->gameList[$args['game_id']];
+          $this->gameJoin($user, $joining_game);
+
+          $user->send(Message::ok('Joined game ' . $args['game_id']));
+          break;
+
+        case 'gameLeave':
+          if (!$this->isAuthenticated($user)) {
+            throw new NotLoggedInException();
+          }
+
+          if (!array_key_exists('game_id', $args)) {
+            throw new \Exception('Game id required');
+          }
+
+          if (!array_key_exists($args['game_id'], $this->gameList)) {
+            throw new \Exception('Game id invalid');
+          }
+
+          $leaving_game = $this->gameList[$args['game_id']];
+          if (!array_key_exists($user->getId(), $leaving_game->getUserIds())) {
+            throw new \Exception('Not in game');
+          }
+
+          $user->setGameId(null);
+          $leaving_game->removeUserId($user->getId());
+
+          $user->send(Message::ok('Left game ' . $args['game_id']));
+          break;
+
+        // all other messages are forwarded to the game itself
+        default:
+          if (!$this->isAuthenticated($user)) {
+            throw new NotLoggedInException();
+          }
+
+          if ($user->getGameId() === null) {
+            throw new \Exception('Not in game');
+          }
+
+          $in_game = $this->gameList[$user->getGameId()];
+          $in_game->getGame()->processMessage($user, $cmd, $args);
+
+          break;
+      }
+    } catch (\Exception $e) {
+      $user->send(Message::error($e->getMessage()));
     }
   }
 }

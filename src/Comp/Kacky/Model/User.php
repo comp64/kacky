@@ -118,11 +118,13 @@ class User {
   /**
    * @param int $game_id
    */
-  public function setGameId(int $game_id) {
+  public function setGameId(int $game_id=null) {
     $this->game_id = $game_id;
   }
 
-
+  /**
+   * @param string $msg
+   */
   public function send(string $msg) {
     $this->socket->send($msg);
   }

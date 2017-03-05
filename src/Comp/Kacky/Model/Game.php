@@ -26,7 +26,7 @@ class Game {
   private $active;
 
   /**
-   * @var string
+   * @var int
    */
   private $timestamp;
 
@@ -36,14 +36,15 @@ class Game {
   private $game;
 
   /**
-   * @var array
+   * Game constructor.
+   * @param string $title
    */
-  private $user_ids;
-
-  public function __construct() {
+  public function __construct(string $title) {
     $this->id = null;
     $this->game = null;
-    $this->user_ids = [];
+    $this->active = 0;
+    $this->title = $title;
+    $this->timestamp = time();
   }
 
   /**
@@ -121,6 +122,10 @@ class Game {
     return $this->id;
   }
 
+  public function setId(int $id) {
+    $this->id = $id;
+  }
+
   /**
    * @return \Comp\Kacky\Game
    */
@@ -170,16 +175,16 @@ class Game {
   }
 
   /**
-   * @return string
+   * @return int
    */
-  public function getTimestamp(): string {
+  public function getTimestamp(): int {
     return $this->timestamp;
   }
 
   /**
-   * @param string $timestamp
+   * @param int $timestamp
    */
-  public function setTimestamp(string $timestamp) {
+  public function setTimestamp(int $timestamp) {
     $this->timestamp = $timestamp;
   }
 
@@ -187,14 +192,20 @@ class Game {
    * @return array
    */
   public function getUserIds(): array {
-    return $this->user_ids;
+    if ($this->game === null) return [];
+
+    return $this->game->getWaitingUsers();
   }
 
-  public function addUserId(int $user_id) {
-    $this->user_ids[$user_id] = $user_id;
+  public function addUserId(int $user_id, string $name) {
+    $this->game->addWaitingUser($user_id, $name);
   }
 
   public function removeUserId(int $user_id) {
-    unset($this->user_ids[$user_id]);
+    $this->game->removeWaitingUser($user_id);
+  }
+
+  public function userCount(): int {
+    return count($this->getUserIds());
   }
 }
