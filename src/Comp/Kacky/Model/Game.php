@@ -35,9 +35,15 @@ class Game {
    */
   private $game;
 
+  /**
+   * @var array
+   */
+  private $user_ids;
+
   public function __construct() {
     $this->id = null;
     $this->game = null;
+    $this->user_ids = [];
   }
 
   /**
@@ -168,5 +174,27 @@ class Game {
    */
   public function getTimestamp(): string {
     return $this->timestamp;
+  }
+
+  /**
+   * @param string $timestamp
+   */
+  public function setTimestamp(string $timestamp) {
+    $this->timestamp = $timestamp;
+  }
+
+  /**
+   * @return array
+   */
+  public function getUserIds(): array {
+    return $this->user_ids;
+  }
+
+  public function addUserId(int $user_id) {
+    $this->user_ids[$user_id] = $user_id;
+  }
+
+  public function removeUserId(int $user_id) {
+    unset($this->user_ids[$user_id]);
   }
 }

@@ -13,7 +13,7 @@ class Server implements MessageComponentInterface {
 
   public function __construct() {
     $this->userList = [];
-    $this->gameList = Game::loadAllFromDB();
+    $this->gameList = [];
   }
 
   /**
@@ -69,8 +69,10 @@ class Server implements MessageComponentInterface {
   }
 
   /**
+   * @param User $user
    * @param string $cmd
    * @param array $args
+   * @throws \Exception
    */
   private function processMessage(User $user, string $cmd, array $args) {
     switch($cmd) {
@@ -89,8 +91,40 @@ class Server implements MessageComponentInterface {
 
       case 'gameList':
         if ($this->isAuthenticated($user)) {
-          $reply = new Message('gameList', $this->gameList);
-          $user->send($reply);
+          $game_list = [];
+          $old_game_ids = [];
+          foreach($this->gameList as $game_id => $game) {
+            if (($game->getActive() == 0) || ($user->getGameId() == $game_id)) {
+              $game_list[$game_id] = [
+                'title' => $game->getTitle(),
+                'players' => [],
+                'active' => ($game->getActive()?($game->getActive()>1?'ukončená':'prebieha'):'pripravená')
+              ];
+            }
+          }
+
+          foreach($this->userList as $some_user) {
+            $some_game_id = $some_user->getGameId();
+            if ($some_game_id === null) continue;
+            if (!array_key_exists($some_game_id, $game_list)) continue;
+            $game_list[$some_game_id]['players'][] = $some_user->getName();
+          }
+
+          $user->send(new Message('gameList', $game_list));
+        } else {
+          $user->send(Message::error('Not logged in'));
+        }
+        break;
+
+      case 'gameNew':
+        if ($this->isAuthenticated($user)) {
+          $keys = array_keys($this->gameList);
+          $max_key = array_pop($keys);
+          $new_id = $max_key + 1;
+          if (array_key_exists($new_id, $this->gameList)) {
+            throw new \Exception('Create game failed - id already in use');
+          }
+          $this->gameList[$new_id] = new Game();
         } else {
           $user->send(Message::error('Not logged in'));
         }

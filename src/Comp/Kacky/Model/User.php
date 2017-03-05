@@ -27,11 +27,17 @@ class User {
   private $socket;
 
   /**
+   * @var int
+   */
+  private $game_id;
+
+  /**
    * User constructor.
    * @param ConnectionInterface $socket
    */
   public function __construct(ConnectionInterface $socket) {
     $this->socket = $socket;
+    $this->game_id = null;
   }
 
   /**
@@ -101,6 +107,21 @@ class User {
   public function getSocket(): ConnectionInterface {
     return $this->socket;
   }
+
+  /**
+   * @return int
+   */
+  public function getGameId() {
+    return $this->game_id;
+  }
+
+  /**
+   * @param int $game_id
+   */
+  public function setGameId(int $game_id) {
+    $this->game_id = $game_id;
+  }
+
 
   public function send(string $msg) {
     $this->socket->send($msg);
