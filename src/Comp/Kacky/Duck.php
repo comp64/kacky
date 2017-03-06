@@ -17,8 +17,9 @@ class Duck {
 	
 	/**
 	 * constructs the instance of duck with initial values
+   * @param int $color
 	 */
-	function __construct($color) {
+	function __construct(int $color) {
 		$this->protection = 0;
 		$this->card = null;
 		$this->color = $color;
@@ -52,15 +53,15 @@ class Duck {
 	/**
 	 * function 'decreaseProtection' decreases protection by 1 for the duck and returns action card KACHNI UNIK if needed
 	 *
-	 * @return ActionCard $card
+	 * @return ActionCard|Duck $card
 	 */
 	public function decrease_protection() {
 		if ($this->protection != 0) {
 			$this->protection -= 1;
 			
-			if ($this->protection == 0 && get_class ( $this->card ) === 'ActionCard') {
-				return $this->remove_card ();
-			} elseif (get_class ( $this->card ) === 'Duck') {
+			if ($this->protection == 0 && get_class($this->card) === 'ActionCard') {
+				return $this->remove_card();
+			} elseif (get_class($this->card) === 'Duck') {
 				return $this->card;
 			}
 		}
@@ -71,14 +72,15 @@ class Duck {
 	/**
 	 * Returns the card on this duck.
 	 *
-	 * @return ActionCard/Duck $card on this duck
+	 * @return ActionCard|Duck $card on this duck
 	 */
 	public function get_card() {
 		return $this->card;
 	}
 	
-	/*
+	/**
 	 * function 'removeCard' returns the action (id=10, Kachní únik) card on the duck
+   * @return ActionCard
 	 */
 	public function remove_card() {
 		$temp = $this->card;

@@ -1,14 +1,24 @@
 <?php
 namespace Comp\Kacky;
 
+use Comp\GameManager\Message;
+use Comp\GameManager\GameServer;
+use Comp\GameManager\ObjectWithId;
 use Comp\Kacky\Model\User;
+use Comp\Kacky\Model\WaitingUser;
 
 class Game {
 
-  // players in started game
+  /**
+   * players in started game
+   * @var Player[]
+   */
 	private $players;
 
-	// game table
+	/**
+   * game table
+   * @var Table
+   */
 	private $table;
 
 	// player, whose turn it is
@@ -17,7 +27,10 @@ class Game {
 	// is game over?
 	private $gameOver;
 
-	// users gathering for the game. these are converted to $players upon game start
+	/**
+   * users gathering for the game. these are converted to $players upon game start
+   * @var WaitingUser[]
+   */
 	private $waitingUsers;
 
 	const P_MIN = 2;
@@ -33,17 +46,16 @@ class Game {
 		$this->gameOver = false;
   }
 
-  function start() {
+  public function start() {
     $nOP = count($this->waitingUsers);
 
     if ($nOP < Game::P_MIN || $nOP > Game::P_MAX) {
-      trigger_error ( 'Incorrect number of players' );
-      return;
+      throw new \Exception('Incorrect number of players');
     }
 
     // initialize private properties
-    foreach ($this->waiting_users as $user) {
-      $this->players[] = new Player($user['id'], $user['name'], $user['color']);
+    foreach ($this->waitingUsers as $user) {
+      $this->players[] = new Player($user->getId(), $user->getName(), $user->getColor());
     }
     $this->table = new Table($this->players);
     $this->activePlayer = rand(0, count($this->players) - 1);
@@ -54,7 +66,7 @@ class Game {
     // deal hands
     foreach ($this->players as $player) {
       for($i = 0; $i < 3; $i ++) {
-        $player->add_card_to_hand( $this->table->get_card_pile()->pop() );
+        $player->add_card_to_hand($this->table->get_card_pile()->pop());
       }
     }
 
@@ -96,17 +108,19 @@ class Game {
 
 	private function get_player_name_by_river_pos($pos) {
 		$duck = $this->table->get_ducks_on_board () [$pos];
-		if ($duck->get_features () == Duck::DUCK)
-			$color = $duck->get_card ()->get_color ();
+		if ($duck->get_features() == Duck::DUCK)
+			$color = $duck->get_card()->get_color();
 		else
-			$color = $duck->get_color ();
+			$color = $duck->get_color();
 		
-		if ($color == - 1)
-			return 'voda';
+		if ($color == - 1) {
+      return 'voda';
+    }
 		
 		foreach ( $this->players as $id => $player ) {
-			if ($color == $player->getColor() )
-				return $player->getName();
+			if ($color == $player->getColor() ) {
+        return $player->getName();
+      }
 		}
 		return '';
 	}
@@ -343,61 +357,62 @@ class Game {
 	 */
 	private function get_possible_moves($player_id) {
 		$player = $this->players[$player_id];
-		
-		$master = array ();
-		$moves = array ();
+
+		$master = [];
+		$moves = [];
 		$is = false;
 		
-		foreach ( $player->getHand() as $k => $cardInHand ) {
-			$moves [$k] = array ();
+		foreach ($player->getHand() as $k => $cardInHand) {
+			$moves[$k] = [];
 			
-			for($i = 0; $i < Table::VISIBLE_DUCKS; $i ++) {
-				$params = array (
-						0 => $i,
-						1 => null 
-				);
+			for ($i = 0; $i < Table::VISIBLE_DUCKS; $i ++) {
+				$params = [
+					0 => $i,
+					1 => null
+				];
 				
-				$is |= ($val = $this->validate ( $player, $cardInHand, $params ));
-				$moves [$k] [$i] = $val;
+				$is |= ($val = $this->validate($player, $cardInHand, $params));
+				$moves[$k][$i] = $val;
 			}
-			$moves [$k] [Table::PILE] = false;
+			$moves[$k][Table::PILE] = false;
 		}
 		
-		if (! $is) {
-			foreach ( $moves as $k => $v ) {
-				$moves [$k] [Table::PILE] = true;
+		if (!$is) {
+			foreach ($moves as $k => $v) {
+				$moves[$k][Table::PILE] = true;
 			}
 		}
 		
-		$master [0] = $moves;
+		$master[0] = $moves;
 		
-		$moves = array ();
-		foreach ( $player->getHand () as $k => $cardInHand ) {
-			if ($player->getHand () [$k]->get_id () == ActionCard::JEJDA_VEDLE ||
-          $player->getHand () [$k]->get_id () == ActionCard::ZIVY_STIT) {
-				$moves [$k] = array ();
+		$moves = [];
+
+		foreach ($player->getHand() as $k => $cardInHand) {
+			if ($player->getHand()[$k]->get_id() == ActionCard::JEJDA_VEDLE ||
+          $player->getHand()[$k]->get_id() == ActionCard::ZIVY_STIT) {
+				$moves[$k] = [];
 				
-				for($i = 0; $i < Table::VISIBLE_DUCKS; $i ++) {
-					$moves [$k] [$i] = array ();
+				for ($i = 0; $i < Table::VISIBLE_DUCKS; $i ++) {
+					$moves[$k][$i] = [];
 					
-					for($j = 0; $j < Table::VISIBLE_DUCKS; $j ++) {
-						$params = array (
-								0 => $i,
-								1 => $j 
-						);
+					for ($j = 0; $j < Table::VISIBLE_DUCKS; $j ++) {
+						$params = [
+							0 => $i,
+							1 => $j
+						];
 						
-						$val = $this->validate ( $player, $cardInHand, $params );
-						$moves [$k] [$i] [$j] = $val;
+						$val = $this->validate($player, $cardInHand, $params);
+						$moves[$k][$i][$j] = $val;
 					}
 				}
 			} elseif ($player->getHand()[$k]->get_id() == ActionCard::ROSAMBO) {
-				$moves [$k] = true;
+				$moves[$k] = true;
 			} else {
-				$moves [$k] = false;
+				$moves[$k] = false;
 			}
 		}
 		
-		$master [1] = $moves;
+		$master[1] = $moves;
 		
 		return $master;
 	}
@@ -484,7 +499,9 @@ class Game {
 						// not tried to kill KACHNI_UNIK
 						if ($color != Player::COLOR_WATER)
 							$died_ducks [] = $param [0];
-					}
+					} else {
+					  $color = Player::COLOR_WATER;
+          }
 					$this->table->set_target ( $param [0], false );
 					
 					if (count ( $this->table->get_ducks_on_board () ) != 6) {
@@ -627,9 +644,12 @@ class Game {
 					if ($this->table->get_ducks_on_board () [$param [0]]->get_color () != Player::COLOR_WATER) {
 						$color = $this->table->remove_duck ( $param [0], true );
 						// not tried to kill KACHNI_UNIK
-						if ($color != Player::COLOR_WATER)
-							$died_ducks [] = $param [0];
-					}
+						if ($color != Player::COLOR_WATER) {
+              $died_ducks [] = $param [0];
+            }
+					} else {
+					  $color = Player::COLOR_WATER;
+          }
 					$this->table->set_target ( $param [0], false );
 					
 					if (count ( $this->table->get_ducks_on_board () ) != 6) {
@@ -656,9 +676,12 @@ class Game {
 					if ($this->table->get_ducks_on_board () [$param [1]]->get_color () != Player::COLOR_WATER) {
 						$color = $this->table->remove_duck ( $param [1], true );
 						// not tried to kill KACHNI_UNIK
-						if ($color != Player::COLOR_WATER)
-							$died_ducks [] = $param [1];
-					}
+						if ($color != Player::COLOR_WATER) {
+              $died_ducks [] = $param [1];
+            }
+					} else {
+					  $color = Player::COLOR_WATER;
+          }
 					$this->table->set_target ( $param [0], false );
 					
 					if (count ( $this->table->get_ducks_on_board () ) != 6) {
@@ -695,32 +718,32 @@ class Game {
 			
 			// in all cases (except for KACHNI_UNIK), the player's card has been used by now
 			// so throw it away and get a new one
-			if ($cardInHand->get_id () != ActionCard::KACHNI_UNIK)
-				$this->use_card ( $playerId, $cardInHandId );
+			if ($cardInHand->get_id() != ActionCard::KACHNI_UNIK)
+				$this->use_card($playerId, $cardInHandId);
 		}
 		
 		// prepare action card play messages
-		$messages [] = array (
-				'cmd' => 100,
-				'text' => '<span class="msg-sys0">' . htmlentities ( implode ( '', $play_message ) ) . '</span>' 
-		);
-		$messages [] = array (
-				'cmd' => 101,
-				'player_id' => $playerId,
-				'card_id' => $cardInHand->get_id (),
-				'river_pos' => $param [0],
-				'extras' => $param [1],
-				'died_pos' => $died_ducks 
-		);
+		$messages[] = [
+			'cmd' => 100,
+			'text' => '<span class="msg-sys0">' . htmlentities(implode('', $play_message)) . '</span>'
+		];
+		$messages[] = [
+			'cmd' => 101,
+			'player_id' => $playerId,
+			'card_id' => $cardInHand->get_id(),
+			'river_pos' => $param[0],
+			'extras' => $param[1],
+			'died_pos' => $died_ducks
+		];
 		
-		$this->move_active_player ();
+		$this->move_active_player();
 		
 		// skontrolujeme, ci niekto vyhral
 		$alive = 0;
 		$winner = 'voda';
-		foreach ( $this->players as $player ) {
-			if ($player->getLives () > 0) {
-				$alive ++;
+		foreach ($this->players as $player) {
+			if ($player->getLives() > 0) {
+				$alive++;
 				$winner = $player->getName();
 			}
 		}
@@ -729,29 +752,29 @@ class Game {
 			$this->activePlayer = - 1;
 			
 			// game-over text message
-			$messages [] = array (
-					'cmd' => 100,
-					'text' => sprintf('<span class="msg-sys0">Game over! %s je víťaz! <a href="javascript:game_start()">*Hrať znova*</a></span>', mb_strtoupper( $winner, 'UTF-8' ))
-			);
+			$messages[] = [
+				'cmd' => 100,
+				'text' => sprintf('<span class="msg-sys0">Game over! %s je víťaz! <a href="javascript:game_start()">*Hrať znova*</a></span>', mb_strtoupper($winner, 'UTF-8'))
+			];
 		}
 		
 		$unprotect_pos = [];
-		foreach ( $this->table->get_ducks_on_board () as $k => $duck ) {
-			$card = $duck->decrease_protection ();
+		foreach ($this->table->get_ducks_on_board() as $k => $duck) {
+			$card = $duck->decrease_protection();
 			
-			if (is_null ( $card )) {
-			} elseif (get_class ( $card ) === 'ActionCard') {
-				$this->table->get_card_trash ()->push ( $card );
-				$unprotect_pos [] = $k;
+			if (is_null($card)) {
+			} elseif (get_class($card) === 'ActionCard') {
+				$this->table->get_card_trash()->push($card);
+				$unprotect_pos[] = $k;
 			} else {
-				$card = $card->decrease_protection ();
-				if (! is_null ( $card )) {
-					$this->table->get_card_trash ()->push ( $card );
-					$unprotect_pos [] = $k;
+				$card = $card->decrease_protection();
+				if (!is_null($card)) {
+					$this->table->get_card_trash()->push($card);
+					$unprotect_pos[] = $k;
 				}
 			}
 		}
-		if (count ( $unprotect_pos )) {
+		if (count($unprotect_pos)) {
       $messages[] = [
         'cmd' => 102,
         'positions' => $unprotect_pos
@@ -765,8 +788,8 @@ class Game {
 	public function get_state($player_id) {
 		$state = [];
 		
-		$state ['players'] = [];
-		foreach ( $this->players as $k => $player ) {
+		$state['players'] = [];
+		foreach ($this->players as $k => $player) {
 			$state['players'][$k] = [
 				'name' => $player->getName(),
 				'lives' => $player->getLives(),
@@ -776,59 +799,59 @@ class Game {
 			];
 		}
 		
-		$state ['river'] = [];
-		foreach ( $this->table->get_ducks_on_board () as $k => $duck ) {
-			$features = $duck->get_features ();
+		$state['river'] = [];
+		foreach ($this->table->get_ducks_on_board() as $k => $duck) {
+			$features = $duck->get_features();
 			
 			$tmp = [
-				'color' => $duck->get_color (),
-				'target' => $this->table->is_targeted ( $k ),
+				'color' => $duck->get_color(),
+				'target' => $this->table->is_targeted($k),
 				'action_card' => false,
 				'other_duck' => false,
 				'features' => $features
 			];
 			
-			switch ($features) {
+			switch($features) {
 				case Duck::PROT :
-					$tmp ['action_card'] = $duck->get_card ()->get_id ();
+					$tmp['action_card'] = $duck->get_card()->get_id();
 					break;
 				case Duck::DUCK :
-					$tmp ['other_duck'] = $duck->get_card ()->get_color ();
+					$tmp['other_duck'] = $duck->get_card()->get_color();
 					break;
 				case Duck::DUCK_PROT :
-					$tmp ['action_card'] = $duck->get_card ()->get_card ()->get_id ();
-					$tmp ['other_duck'] = $duck->get_card ()->get_color ();
+					$tmp['action_card'] = $duck->get_card()->get_card()->get_id();
+					$tmp['other_duck'] = $duck->get_card()->get_color();
 					break;
 			}
 			
 			$state['river'][] = $tmp;
 		}
 		
-		$state ['pile'] = [
+		$state['pile'] = [
 			'id' => false,
 			'name' => false,
 			'desc' => false
 		];
 
-		$pile_top = $this->table->get_card_trash ()->peek ();
+		$pile_top = $this->table->get_card_trash()->peek();
 		if ($pile_top !== false) {
-			$state ['pile'] = [
-				'id' => $pile_top->get_id (),
-				'name' => $pile_top->get_name (),
-				'desc' => $pile_top->get_description ()
+			$state['pile'] = [
+				'id' => $pile_top->get_id(),
+				'name' => $pile_top->get_name(),
+				'desc' => $pile_top->get_description()
 			];
 		}
 		
-		$state ['hand'] = [];
-		foreach ( $this->players [$player_id]->getHand () as $card ) {
-			$state ['hand'] [] = [
-				'id' => $card->get_id (),
-				'name' => $card->get_name (),
-				'desc' => $card->get_description ()
+		$state['hand'] = [];
+		foreach ($this->players[$player_id]->getHand() as $card) {
+			$state['hand'][] = [
+				'id' => $card->get_id(),
+				'name' => $card->get_name(),
+				'desc' => $card->get_description()
 			];
 		}
 		
-		$state ['moves'] = $this->get_possible_moves ( $player_id );
+		$state['moves'] = $this->get_possible_moves($player_id);
 		
 		return $state;
 	}
@@ -836,20 +859,20 @@ class Game {
 	public function debug_counts() {
 		$action_cards_hand = 0;
 		$lives = 0;
-		foreach ( $this->players as $player ) {
-			$action_cards_hand += count ( $player->getHand () );
-			$lives += $player->getLives ();
+		foreach ($this->players as $player) {
+			$action_cards_hand += count ($player->getHand());
+			$lives += $player->getLives();
 		}
-		$action_cards_pile = count ( $this->table->get_card_pile ()->get_items () );
-		$action_cards_trash = count ( $this->table->get_card_trash ()->get_items () );
+		$action_cards_pile = count($this->table->get_card_pile()->get_items());
+		$action_cards_trash = count($this->table->get_card_trash()->get_items());
 		
-		$ducks_board = count ( $this->table->get_ducks_on_board () );
-		$ducks_deck = count ( $this->table->get_ducks_in_deck ()->get_items () );
+		$ducks_board = count($this->table->get_ducks_on_board());
+		$ducks_deck = count($this->table->get_ducks_in_deck()->get_items());
 		
 		$null_count = 0;
-		foreach ( $this->table->get_ducks_in_deck ()->get_items () as $duck ) {
-			if (is_null ( $duck )) {
-				$null_count ++;
+		foreach ($this->table->get_ducks_in_deck()->get_items() as $duck) {
+			if (is_null($duck)) {
+				$null_count++;
 			}
 		}
 		
@@ -864,7 +887,7 @@ class Game {
 		];
 	}
 
-	public function processMessage(User $user, string $cmd, array $args) {
+	public function processMessage(ObjectWithId $user, string $cmd, array $args, GameServer $ms) {
 	  switch($cmd) {
       case 'setColor':
         if (!array_key_exists('color', $args)) {
@@ -878,7 +901,7 @@ class Game {
         // check if the color is available
         $count = 0;
         foreach($this->waitingUsers as $waiting_user) {
-          if ($waiting_user['color'] == $args['color']) {
+          if ($waiting_user->getColor() == $args['color']) {
             $count++;
           }
         }
@@ -886,13 +909,24 @@ class Game {
           throw new \Exception('Color in use');
         }
 
-        $this->waitingUsers[$user->getId()]['color'] = $args['color'];
+        $this->waitingUsers[$user->getId()]->setColor($args['color']);
 
-        throw new \Exception('OK, color changed');
+        $ms->send($user, Message::ok('Color changed'));
+        $ms->sendMany($this->waitingUsers, new Message('setColor', ['user_id'=>$user->getId(), 'color'=>$args['color']]));
         break;
 
       case 'gameStart':
         $this->start();
+
+        $player_id = $this->get_player_id_by_user_id($user->getId());
+        if ($player_id === false) {
+          throw new \Exception('Invalid user id');
+        }
+
+        $ms->send($user, Message::ok('Game started'));
+        foreach($this->players as $player_num => $player) {
+          $ms->send($player, new Message('gameStart', $this->get_state($player_num)));
+        }
 
         break;
 
@@ -910,18 +944,14 @@ class Game {
   }
 
   /**
-   * @return array
+   * @return WaitingUser[]
    */
-  public function getWaitingUsers(): array {
+  public function getWaitingUsers() {
     return $this->waitingUsers;
   }
 
   public function addWaitingUser(int $user_id, string $name) {
-    $this->waitingUsers[$user_id] = [
-      'id' => $user_id,
-      'name' => $name,
-      'color' => -1
-    ];
+    $this->waitingUsers[$user_id] = new WaitingUser($user_id, $name);
   }
 
   public function removeWaitingUser(int $user_id) {

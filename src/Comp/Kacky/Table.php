@@ -15,20 +15,20 @@ class Table {
 	/**
 	 * creates the instance of the board with initial values depending on the number of players
 	 *
-	 * @param array $players
+	 * @param Player[] $players
 	 *        	who participate in the game
 	 */
 	function __construct($players) {
-		$this->cardPile = new Stack ();
-		$this->cardTrash = new Stack ();
-		$this->ducksInDeck = new Queue ();
-		$this->ducksOnBoard = array ();
-		$this->targeted = array ();
+		$this->cardPile = new Stack();
+		$this->cardTrash = new Stack();
+		$this->ducksInDeck = new Queue();
+		$this->ducksOnBoard = [];
+		$this->targeted = [];
 		
 		// add colored ducks into the deck
-		foreach ( $players as $player ) {
+		foreach ($players as $player) {
 			for($i = 0; $i < 5; $i ++) {
-				$this->ducksInDeck->add ( new Duck ( $player->get_color () ) );
+				$this->ducksInDeck->add(new Duck($player->getColor()));
 			}
 		}
 		
@@ -71,7 +71,7 @@ class Table {
 	/**
 	 * Returns the array of ducks on board.
 	 *
-	 * @return array[Duck] $ducksOnBoard array of ducks on this board
+	 * @return Duck[] $ducksOnBoard array of ducks on this board
 	 */
 	public function get_ducks_on_board() {
 		return $this->ducksOnBoard;

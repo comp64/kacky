@@ -1,10 +1,11 @@
 <?php
 namespace Comp\Kacky\Model;
 
+use Comp\GameManager\ObjectWithId;
 use Comp\Kacky\DB;
 use Ratchet\ConnectionInterface;
 
-class User {
+class User implements ObjectWithId {
 
   /**
    * @var int

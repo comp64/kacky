@@ -1,15 +1,15 @@
 <?php
 namespace Comp\Kacky;
 
-use Comp\Kacky\Model\User;
+use Comp\GameManager\ObjectWithId;
 
-class Player {
+class Player implements ObjectWithId {
 	private $color;
 	private $id;
 	private $name;
 
 	/**
-   * @var array[ActionCard]
+   * @var ActionCard[]
    */
 	private $hand;
 	private $lives;
@@ -52,7 +52,7 @@ class Player {
 
 	/**
 	 * function 'getHand' returns the hand of the player
-   * @return array[ActionCard]
+   * @return ActionCard[]
 	 */
 	public function getHand() {
 		return $this->hand;

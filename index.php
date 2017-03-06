@@ -14,6 +14,7 @@ function game_new() {
   var title = prompt("Zadaj meno hry");
   if ((title == null) || (title == '')) return;
 	
+  //noinspection JSUnresolvedFunction
   $.post("ajax.php", {
     cmd: "game_new",
     title: title

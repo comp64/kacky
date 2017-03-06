@@ -128,7 +128,7 @@ class ActionCard {
 	/**
 	 * Returns the id of this card.
 	 * 
-	 * @return Integer $id of the card
+	 * @return int $id of the card
 	 */
 	public function get_id() {
 		return $this->id;
@@ -137,7 +137,7 @@ class ActionCard {
 	/**
 	 * Returns the name of the action card.
 	 * 
-	 * @return String $name of the action card 
+	 * @return string $name of the action card
 	 */
 	public function get_name() {
 		return $this->name;
@@ -146,7 +146,7 @@ class ActionCard {
 	/**
 	 * Returns the description of the action card.
 	 * 
-	 * @return String $description of the action card
+	 * @return string $description of the action card
 	 */
 	public function get_description() {
 		return $this->description;

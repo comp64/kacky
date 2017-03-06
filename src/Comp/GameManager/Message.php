@@ -14,10 +14,11 @@ class Message {
 
   /**
    * Message constructor.
+   * @param string $cmd
    * @param array $args
    */
-  public function __construct(array $args=null) {
-    $this->cmd = 'ok';
+  public function __construct(string $cmd, array $args=[]) {
+    $this->cmd = $cmd;
     $this->args = $args;
   }
 
@@ -88,8 +89,7 @@ class Message {
    * @return string
    */
   public static function error(string $error_msg): string {
-    $msg = new static(['text' => $error_msg]);
-    $msg->setCmd('error');
+    $msg = new static('error', ['text' => $error_msg]);
     return $msg->encode();
   }
 
@@ -98,8 +98,7 @@ class Message {
    * @return string
    */
   public static function ok(string $ok_msg): string {
-    $msg = new static(['text' => $ok_msg]);
-    $msg->setCmd('ok');
+    $msg = new static('ok', ['text' => $ok_msg]);
     return $msg->encode();
   }
 

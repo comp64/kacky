@@ -6,14 +6,27 @@ use Ratchet\MessageComponentInterface;
 use Comp\Kacky\Model\Game;
 use Comp\Kacky\Model\User;
 
-class Server implements MessageComponentInterface {
+class Server implements MessageComponentInterface, GameServer {
 
+  /**
+   * @var User[]
+   */
   private $userList;
+
+  /**
+   * @var Game[]
+   */
   private $gameList;
+
+  /**
+   * @var ConnectionInterface[]
+   */
+  private $userIndex;
 
   public function __construct() {
     $this->userList = [];
     $this->gameList = [];
+    $this->userIndex = [];
   }
 
   /**
@@ -22,6 +35,7 @@ class Server implements MessageComponentInterface {
    * @throws \Exception
    */
   function onOpen(ConnectionInterface $conn) {
+    /** @noinspection PhpUndefinedFieldInspection */
     $conn_id = $conn->resourceId;
     $this->userList[$conn_id] = new User($conn);
   }
@@ -32,7 +46,13 @@ class Server implements MessageComponentInterface {
    * @throws \Exception
    */
   function onClose(ConnectionInterface $conn) {
+    /** @noinspection PhpUndefinedFieldInspection */
     $conn_id = $conn->resourceId;
+
+    $user_id = $this->userList[$conn_id]->getId();
+    if ($user_id !== null) {
+      unset($this->userIndex[$user_id]);
+    }
     unset($this->userList[$conn_id]);
   }
 
@@ -55,10 +75,12 @@ class Server implements MessageComponentInterface {
    */
   function onMessage(ConnectionInterface $from, $msg) {
     try {
-      $message = new Message();
+      $message = new Message('');
       $message->decode($msg);
 
-      $this->processMessage($this->userList[$from->resourceId], $message->getCmd(), $message->getArgs());
+      /** @noinspection PhpUndefinedFieldInspection */
+      $resourceId = $from->resourceId;
+      $this->processMessage($this->userList[$resourceId], $message->getCmd(), $message->getArgs());
     } catch(\Exception $e) {
       $from->send(Message::error($e->getMessage()));
     }
@@ -91,23 +113,26 @@ class Server implements MessageComponentInterface {
 
           $user->loadFromDB(null, $username);
           if (($user->getId() === null) || !$user->verifyPassword($password)) {
-            $user->send(Message::error('Invalid user or password'));
+            throw new \Exception('Invalid user or password');
+          }
+
+          // make a user_id -> socket mapping
+          $this->userIndex[$user->getId()] = $user->getSocket();
+
+          // try to find out, if the user was in game
+          // put him there directly
+          $previous_game = null;
+          foreach ($this->gameList as $game_id => $game) {
+            if (array_key_exists($user->getId(), $game->getUserIds())) {
+              $user->setGameId($game_id);
+              $previous_game = $game_id;
+              break;
+            }
+          }
+          if ($previous_game !== null) {
+            $user->send(new Message('ok', ['text'=>'Authenticated in game ' . $previous_game, 'game_id'=>$previous_game]));
           } else {
-            // try to find out, if the user was in game
-            // put him there directly
-            $previous_game = null;
-            foreach ($this->gameList as $game_id => $game) {
-              if (array_key_exists($user->getId(), $game->getUserIds())) {
-                $user->setGameId($game_id);
-                $previous_game = $game_id;
-                break;
-              }
-            }
-            if ($previous_game !== null) {
-              $user->send(new Message(['text'=>'Authenticated in game ' . $previous_game, 'game_id'=>$previous_game]));
-            } else {
-              $user->send(Message::ok('Authenticated'));
-            }
+            $user->send(Message::ok('Authenticated'));
           }
 
           break;
@@ -136,7 +161,7 @@ class Server implements MessageComponentInterface {
             $game_list[$some_game_id]['players'][] = $some_user->getName();
           }
 
-          $user->send(new Message(['gameList' => $game_list]));
+          $user->send(new Message('ok', ['gameList' => $game_list]));
           break;
 
         case 'gameNew':
@@ -162,7 +187,7 @@ class Server implements MessageComponentInterface {
 
           $this->gameJoin($user, $new_game);
 
-          $user->send(new Message(['text' => 'Game created and joined', 'game_id' => $new_id]));
+          $user->send(new Message('ok', ['text' => 'Game created and joined', 'game_id' => $new_id]));
           break;
 
         case 'gameJoin':
@@ -219,12 +244,28 @@ class Server implements MessageComponentInterface {
           }
 
           $in_game = $this->gameList[$user->getGameId()];
-          $in_game->getGame()->processMessage($user, $cmd, $args);
+          $in_game->getGame()->processMessage($user, $cmd, $args, $this);
 
           break;
       }
     } catch (\Exception $e) {
       $user->send(Message::error($e->getMessage()));
+    }
+  }
+
+  public function send(ObjectWithId $user, string $msg) {
+    if (array_key_exists($user->getId(), $this->userIndex)) {
+      $this->userIndex[$user->getId()]->send($msg);
+    }
+  }
+
+  /**
+   * @param ObjectWithId[] $users
+   * @param string $msg
+   */
+  public function sendMany(array $users, string $msg) {
+    foreach($users as $user) {
+      $this->send($user, $msg);
     }
   }
 }
