@@ -2,11 +2,13 @@
 use Comp\Kacky\GUI;
 use Comp\Kacky\DB;
 
-$_escape_int=array('gid'=>0);
 include('vendor/autoload.php');
 
+$gameId = $_GET['gid'] ?? 0;
+$gameId*=1;
+
 function redirect($url) {
-  echo "<script>window.location.replace('".$url."')</script>";
+  echo "<script>window.location.replace('$url')</script>";
 }
 ?><!DOCTYPE html>
 <html>
@@ -78,19 +80,6 @@ if ($gid==0) { // no game selected
     WHERE (g_active=1 AND age > 1440) OR (g_active=2 AND age > 30)"
   );
 
-	$res=$db->q(
-	  "SELECT game_kacky.g_id, g_title, g_players, g_active, u_id IS NOT NULL AS in_game
-		FROM game_kacky
-		LEFT JOIN user2game ON game_kacky.g_id=user2game.g_id AND u_id=$uid
-		LEFT JOIN (
-			SELECT g_id, GROUP_CONCAT(u_name SEPARATOR ', ') AS g_players
-			FROM user2game
-			JOIN user USING (u_id)
-			GROUP BY g_id
-		) AS t2 ON game_kacky.g_id=t2.g_id
-		WHERE g_active=0 OR u_id IS NOT NULL"
-	);
-
 	echo '<div style="margin:15px">';
 	if ($res->num_rows > 10) echo '<button onclick="game_new()">Nová hra</button>';
 	if ($res->num_rows) {
@@ -113,18 +102,6 @@ if ($gid==0) { // no game selected
 	echo '<br><button onclick="game_new()">Nová hra</button>';
 	echo '</div>';
 } else { // game selected
-  $row=$db->getrow(
-    "SELECT g_count, g_active, g_data, u_id IS NOT NULL AS in_game
-		FROM game_kacky
-		LEFT JOIN user2game ON game_kacky.g_id=user2game.g_id AND u_id=$uid
-		LEFT JOIN (
-			SELECT g_id, COUNT(*) AS g_count
-			FROM user2game
-			JOIN user USING (u_id)
-			GROUP BY g_id
-		) AS t2 ON game_kacky.g_id=t2.g_id
-		WHERE (g_active=0 OR u_id IS NOT NULL) AND game_kacky.g_id=$gid"
-	);
 
   if (is_null($row)) {
     echo '<p>Neplatná hra</p>';

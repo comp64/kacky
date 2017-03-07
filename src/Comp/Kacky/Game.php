@@ -107,15 +107,6 @@ class Game {
 		$this->activePlayer = ($this->activePlayer + 1) % count ( $this->players );
 	}
 
-	public function get_player_id_by_name($name) {
-		foreach ( $this->players as $id => $player ) {
-			if ($name === $player->getName ()) {
-				return $id;
-			}
-		}
-		return false;
-	}
-
 	private function get_player_id_by_user_id($user_id) {
 	  foreach($this->players as $id => $player) {
 	    if ($user_id == $player->getId()) {
@@ -807,10 +798,27 @@ class Game {
 		return $messages;
 	}
 	
-	// return the game state for displaying in GUI
-	public function get_state($player_id) {
+	// return the game state of the game
+  // this will be parsed by UI
+	public function getDetails($player_id) {
 		$state = [];
-		
+
+		$state['title'] = $this->title;
+		$state['active'] = $this->active;
+
+		// inactive game lists only the waiting players
+		if (!$this->active) {
+		  $state['waiting_players'] = [];
+		  foreach($this->waitingUsers as $user) {
+		    $state['waiting_players'][] = [
+		      'id' => $user->getId(),
+          'name' => $user->getName(),
+          'color' => $user->getColor()
+        ];
+      }
+      return $state;
+    }
+
 		$state['players'] = [];
 		foreach ($this->players as $k => $player) {
 			$state['players'][$k] = [
@@ -938,6 +946,13 @@ class Game {
         $ms->sendMany($this->waitingUsers, new Message('setColor', ['user_id'=>$user->getId(), 'color'=>$args['color']]));
         break;
 
+      case 'gameDetails':
+        // try obtaining the player_id. Works even if not found (game not started yet)
+        $player_id = $this->get_player_id_by_user_id($user->getId());
+
+        $ms->send($user, new Message('ok', ['gameDetails'=>$this->getDetails($player_id)]));
+        break;
+
       case 'gameStart':
         $this->start();
 
@@ -948,7 +963,7 @@ class Game {
 
         $ms->send($user, Message::ok('Game started'));
         foreach($this->players as $player_num => $player) {
-          $ms->send($player, new Message('gameStart', $this->get_state($player_num)));
+          $ms->send($player, new Message('gameStart', $this->getDetails($player_num)));
         }
 
         break;
@@ -963,24 +978,28 @@ class Game {
           throw new \Exception('Inactive game');
         }
 
-        if (strlen($param2)) {
-          $param1 = array_map(function ($v) {
+        if (strlen($args['param2'])) {
+          $args['param1'] = array_map(function ($v) {
             return $v * 1;
-          }, explode(' ', trim($param2)));
+          }, explode(' ', trim($args['param2'])));
         }
 
-        $ret=$this->play($player_id, $card_id, array($param0, $param1));
-        if ($ret!==false) {
-          if ($this->is_gameover()) {
-            $this->active=2;
-          }
-          // log messages output from the play() call
-          foreach($ret as $msg) log_message($gid, $uid, $msg['cmd'], $msg);
+        $ret=$this->play($player_id, $args['card_id'], array($args['param0'], $args['param1']));
 
-          $gstate = $this->get_state($player_id);
-          $gstate['messages'] = read_messages($gid, $uid, $epoch);
-          echo json_encode($gstate);
+        if ($ret === false) {
+          throw new \Exception('Game::play() returned false');
         }
+
+        if ($this->is_gameover()) {
+          $this->active=2;
+        }
+
+        $gstate = $this->getDetails($player_id);
+        $gstate['messages'] = $ret;
+
+        $ms->send($user, Message::ok('Card played'));
+        $ms->sendMany($this->players, new Message('cardPlay', $gstate));
+
         break;
 
       default:
@@ -1001,7 +1020,9 @@ class Game {
   }
 
   public function removeWaitingUser(int $user_id) {
-    unset($this->waitingUsers[$user_id]);
+    if (array_key_exists($user_id, $this->waitingUsers)) {
+      unset($this->waitingUsers[$user_id]);
+    }
   }
 
   /**

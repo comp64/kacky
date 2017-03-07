@@ -90,6 +90,33 @@ class Server implements MessageComponentInterface, GameServer {
     return $user->getId() !== null;
   }
 
+  /**
+   * @param User $user
+   * @return array
+   */
+  private function gameListing(User $user) {
+    $game_list = [];
+    //$old_game_ids = [];
+    foreach ($this->gameList as $game_id => $game) {
+      if (($game->getActive() == 0) || ($user->getGameId() == $game_id)) {
+        $game_list[$game_id] = [
+          'title' => $game->getTitle(),
+          'players' => [],
+          'active' => ($game->getActive() ? ($game->getActive() > 1 ? 'ukončená' : 'prebieha') : 'pripravená')
+        ];
+      }
+    }
+
+    foreach ($this->userList as $some_user) {
+      $some_game_id = $some_user->getGameId();
+      if ($some_game_id === null) continue;
+      if (!array_key_exists($some_game_id, $game_list)) continue;
+      $game_list[$some_game_id]['players'][] = $some_user->getName();
+    }
+
+    return $game_list;
+  }
+
   private function gameJoin(User $user, Game $game) {
     if (count($game->getWaitingUsers()) > Game::P_MAX) {
       throw new \Exception('Too many players');
@@ -119,7 +146,7 @@ class Server implements MessageComponentInterface, GameServer {
           // make a user_id -> socket mapping
           $this->userIndex[$user->getId()] = $user->getSocket();
 
-          // try to find out, if the user was in game
+          // if the user was in game
           // put him there directly
           $previous_game = null;
           foreach ($this->gameList as $game_id => $game) {
@@ -132,7 +159,7 @@ class Server implements MessageComponentInterface, GameServer {
           if ($previous_game !== null) {
             $user->send(new Message('ok', ['text'=>'Authenticated in game ' . $previous_game, 'game_id'=>$previous_game]));
           } else {
-            $user->send(Message::ok('Authenticated'));
+            $user->send(new Message('ok', ['text'=>'Authenticated', 'gameList'=>$this->gameListing($user)]));
           }
 
           break;
@@ -142,31 +169,16 @@ class Server implements MessageComponentInterface, GameServer {
             throw new NotLoggedInException();
           }
 
-          $game_list = [];
-          //$old_game_ids = [];
-          foreach ($this->gameList as $game_id => $game) {
-            if (($game->getActive() == 0) || ($user->getGameId() == $game_id)) {
-              $game_list[$game_id] = [
-                'title' => $game->getTitle(),
-                'players' => [],
-                'active' => ($game->getActive() ? ($game->getActive() > 1 ? 'ukončená' : 'prebieha') : 'pripravená')
-              ];
-            }
-          }
-
-          foreach ($this->userList as $some_user) {
-            $some_game_id = $some_user->getGameId();
-            if ($some_game_id === null) continue;
-            if (!array_key_exists($some_game_id, $game_list)) continue;
-            $game_list[$some_game_id]['players'][] = $some_user->getName();
-          }
-
-          $user->send(new Message('ok', ['gameList' => $game_list]));
+          $user->send(new Message('ok', ['gameList' => $this->gameListing($user)]));
           break;
 
         case 'gameNew':
           if (!$this->isAuthenticated($user)) {
             throw new NotLoggedInException();
+          }
+
+          if ($user->getGameId() !== null) {
+            throw new \Exception('Already in another game');
           }
 
           if (!array_key_exists('title', $args)) {
@@ -187,6 +199,9 @@ class Server implements MessageComponentInterface, GameServer {
           $this->gameJoin($user, $new_game);
 
           $user->send(new Message('ok', ['text' => 'Game created and joined', 'game_id' => $new_id]));
+          $this->sendNonPlaing(null, function(User $x){
+            return new Message('gameList', $this->gameListing($x));
+          });
           break;
 
         case 'gameJoin':
@@ -198,14 +213,19 @@ class Server implements MessageComponentInterface, GameServer {
             throw new \Exception('Game id required');
           }
 
+          if (($user->getGameId() !== null) && ($user->getGameId() != $args['game_id'])) {
+            throw new \Exception('Already in another game');
+          }
+
           if (!array_key_exists($args['game_id'], $this->gameList)) {
             throw new \Exception('Game id invalid');
           }
 
-          $joining_game = $this->gameList[$args['game_id']];
-          $this->gameJoin($user, $joining_game);
+          $joined_game = $this->gameList[$args['game_id']];
+          $this->gameJoin($user, $joined_game);
 
           $user->send(Message::ok('Joined game ' . $args['game_id']));
+          $this->sendMany($joined_game->getWaitingUsers(), new Message('gameJoin', ['user_id', $user->getId()]));
           break;
 
         case 'gameLeave':
@@ -213,23 +233,17 @@ class Server implements MessageComponentInterface, GameServer {
             throw new NotLoggedInException();
           }
 
-          if (!array_key_exists('game_id', $args)) {
-            throw new \Exception('Game id required');
-          }
-
-          if (!array_key_exists($args['game_id'], $this->gameList)) {
-            throw new \Exception('Game id invalid');
-          }
-
-          $leaving_game = $this->gameList[$args['game_id']];
-          if (!array_key_exists($user->getId(), $leaving_game->getUserIds())) {
+          if ($user->getGameId() === null) {
             throw new \Exception('Not in game');
           }
 
+          if (array_key_exists($user->getGameId(), $this->gameList)) {
+            $leaving_game = $this->gameList[$user->getGameId()];
+            $leaving_game->removeUserId($user->getId());
+            $this->sendMany($leaving_game->getWaitingUsers(), new Message('gameLeave', ['user_id', $user->getId()]));
+          }
+          $user->send(Message::ok('Left game ' . $user->getGameId()));
           $user->setGameId(null);
-          $leaving_game->removeUserId($user->getId());
-
-          $user->send(Message::ok('Left game ' . $args['game_id']));
           break;
 
         // all other messages are forwarded to the game itself
@@ -265,6 +279,23 @@ class Server implements MessageComponentInterface, GameServer {
   public function sendMany(array $users, string $msg) {
     foreach($users as $user) {
       $this->send($user, $msg);
+    }
+  }
+
+  /**
+   * send message to users not yet in a game
+   * @param Message $msg
+   * @param callable $msg_fn
+   */
+  private function sendNonPlaing(Message $msg=null, callable $msg_fn=null) {
+    foreach($this->userList as $idle_user) {
+      if ($idle_user->getGameId() === null) {
+        if ($msg !== null) {
+          $idle_user->send($msg);
+        } else {
+          $idle_user->send($msg_fn($idle_user));
+        }
+      }
     }
   }
 }
