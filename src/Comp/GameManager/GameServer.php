@@ -9,6 +9,4 @@ interface GameServer {
    * @param string $msg
    */
   public function sendMany(array $users, string $msg);
-
-  //public function setActive
 }

@@ -4,10 +4,29 @@ namespace Comp\Kacky;
 use Comp\GameManager\Message;
 use Comp\GameManager\GameServer;
 use Comp\GameManager\ObjectWithId;
-use Comp\Kacky\Model\User;
 use Comp\Kacky\Model\WaitingUser;
 
 class Game {
+
+  /**
+   * @var int
+   */
+  private $id;
+
+  /**
+   * @var string
+   */
+  private $title;
+
+  /**
+   * @var int
+   */
+  private $active;
+
+  /**
+   * @var int
+   */
+  private $timestamp;
 
   /**
    * players in started game
@@ -38,9 +57,12 @@ class Game {
 	
 	/**
 	 * Constructs the instance of game.
+   * @param string $title
 	 */
-	function __construct() {
-		// initialize private properties
+	function __construct(string $title) {
+    $this->active = 0;
+    $this->title = $title;
+    $this->timestamp = time();
 		$this->players = [];
 		$this->waitingUsers = [];
 		$this->gameOver = false;
@@ -75,6 +97,7 @@ class Game {
 
     // deal ducks
     $this->table->deal_ducks();
+    $this->active = 1;
   }
 
 	/**
@@ -935,6 +958,29 @@ class Game {
         if ($player_id === false) {
           throw new \Exception('Invalid user id');
         }
+
+        if (!$this->active) {
+          throw new \Exception('Inactive game');
+        }
+
+        if (strlen($param2)) {
+          $param1 = array_map(function ($v) {
+            return $v * 1;
+          }, explode(' ', trim($param2)));
+        }
+
+        $ret=$this->play($player_id, $card_id, array($param0, $param1));
+        if ($ret!==false) {
+          if ($this->is_gameover()) {
+            $this->active=2;
+          }
+          // log messages output from the play() call
+          foreach($ret as $msg) log_message($gid, $uid, $msg['cmd'], $msg);
+
+          $gstate = $this->get_state($player_id);
+          $gstate['messages'] = read_messages($gid, $uid, $epoch);
+          echo json_encode($gstate);
+        }
         break;
 
       default:
@@ -957,4 +1003,19 @@ class Game {
   public function removeWaitingUser(int $user_id) {
     unset($this->waitingUsers[$user_id]);
   }
+
+  /**
+   * @return int
+   */
+  public function getId() {
+    return $this->id;
+  }
+
+  /**
+   * @param int $id
+   */
+  public function setId(int $id) {
+    $this->id = $id;
+  }
+
 }

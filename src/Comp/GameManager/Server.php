@@ -3,7 +3,7 @@ namespace Comp\GameManager;
 
 use Ratchet\ConnectionInterface;
 use Ratchet\MessageComponentInterface;
-use Comp\Kacky\Model\Game;
+use Comp\Kacky\Game;
 use Comp\Kacky\Model\User;
 
 class Server implements MessageComponentInterface, GameServer {
@@ -91,12 +91,12 @@ class Server implements MessageComponentInterface, GameServer {
   }
 
   private function gameJoin(User $user, Game $game) {
-    if ($game->userCount() > \Comp\Kacky\Game::P_MAX) {
+    if (count($game->getWaitingUsers()) > Game::P_MAX) {
       throw new \Exception('Too many players');
     }
 
     $user->setGameId($game->getId());
-    $game->addUserId($user->getId(), $user->getName());
+    $game->addWaitingUser($user->getId(), $user->getName());
   }
 
   /**
@@ -182,7 +182,6 @@ class Server implements MessageComponentInterface, GameServer {
           $new_id = $max_key + 1;
           $new_game = new Game($args['title']);
           $new_game->setId($new_id);
-          $new_game->setGame(new \Comp\Kacky\Game());
           $this->gameList[$new_id] = $new_game;
 
           $this->gameJoin($user, $new_game);
