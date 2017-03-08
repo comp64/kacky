@@ -229,10 +229,40 @@ class MySQL extends \mysqli {
 class DB {
   private static $db=null;
 
-  // Forward all static calls to the DB object instance
-  public static function __callStatic($name, $params) {
-    $db = static::getInstance();
-    return call_user_func_array(array($db, $name), $params);
+  /**
+   * Get the database configuration
+   * @param string $configFile
+   * @return array
+   * @throws \Exception
+   */
+  public static function getConfig(string $configFile=null) {
+    $configFile = $configFile ?? __DIR__.'/../../../config/DB.json';
+    if (!file_exists($configFile)) {
+      throw new \Exception('DB config file not found: ' . $configFile);
+    }
+    return json_decode(file_get_contents($configFile), true);
+  }
+
+  /**
+   * Get database DSN for use with ex. PDO class
+   * @param array|null $config
+   * @return string
+   */
+  public static function getDSN(array $config=null) {
+    $config = $config ?? static::getConfig();
+    return 'mysql:host='.$config['host'].';dbname='.$config['db'];
+  }
+
+  /**
+   * Obtain PDO connection
+   * @param array|null $config
+   * @return \PDO
+   */
+  public static function getPDO(array $config=null) {
+    $config = $config ?? static::getConfig();
+    $pdo = new \PDO(static::getDSN($config), $config['user'], $config['pass']);
+    $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+    return $pdo;
   }
 
   // obtain or create DB instance
@@ -241,7 +271,8 @@ class DB {
    */
   public static function getInstance() {
     if (is_null(static::$db)) {
-      static::$db = new MySQL('localhost', 'games', '8HFVQVcKKBJzZXQN', 'games');
+      $dbConfig = static::getConfig();
+      static::$db = new MySQL($dbConfig['host'], $dbConfig['user'], $dbConfig['pass'], $dbConfig['db']);
     }
     return static::$db;
   }

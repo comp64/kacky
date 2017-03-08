@@ -130,6 +130,8 @@ class Server implements MessageComponentInterface, GameServer {
    * @param User $user
    * @param string $cmd
    * @param array $args
+   * @throws \Exception
+   * @throws NotLoggedInException
    */
   private function processMessage(User $user, string $cmd, array $args) {
     try {
@@ -138,10 +140,7 @@ class Server implements MessageComponentInterface, GameServer {
           $username = $args['username'] ?? '';
           $password = $args['password'] ?? '';
 
-          $user->loadFromDB(null, $username);
-          if (($user->getId() === null) || !$user->verifyPassword($password)) {
-            throw new \Exception('Invalid user or password');
-          }
+          $user->verifyFromDB($username, $password);
 
           // make a user_id -> socket mapping
           $this->userIndex[$user->getId()] = $user->getSocket();

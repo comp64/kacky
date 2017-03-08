@@ -1,0 +1,8 @@
+{
+  "user": "DB username",
+  "pass": "DB password",
+  "db": "DB database name",
+  "host": "DB host",
+  "crypt_pw": "Random 16 characters (at least)",
+  "crypt_iv": "Random 16 characters (at least)"
+}

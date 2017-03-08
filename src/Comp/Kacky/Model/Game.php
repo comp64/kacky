@@ -1,4 +1,5 @@
 <?php
+// Not used at this time
 namespace Comp\Kacky\Model;
 use Comp\Kacky\DB;
 use Comp\Kacky\Game as Game_kacky;

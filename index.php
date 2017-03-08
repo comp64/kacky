@@ -1,43 +1,90 @@
 <?php
 use Comp\Kacky\GUI;
 use Comp\Kacky\DB;
+use Comp\Kacky\Model\User;
+use Symfony\Component\HttpFoundation\Session\Session;
+use Symfony\Component\HttpFoundation\Session\Storage\Handler\PdoSessionHandler;
+use Symfony\Component\HttpFoundation\Session\Storage\NativeSessionStorage;
 
 include('vendor/autoload.php');
+
+// prepare Session
+$dbConfig = DB::getConfig();
+$session = new Session(new NativeSessionStorage([], new PdoSessionHandler(DB::getPDO($dbConfig), ['db_table'=>'session'])));
+$session->setName('kacky_wi');
+$session->start();
 
 $gameId = $_GET['gid'] ?? 0;
 $gameId*=1;
 
 function redirect($url) {
   echo "<script>window.location.replace('$url')</script>";
+  exit();
 }
+
+// handle login form submission
+if (isset($_POST['lsub'])) {
+  $user = new User(null);
+  $username = substr($_POST['uname'], 0, 16);
+  $password = substr($_POST['upass'], 0, 16);
+  try {
+    $user->verifyFromDB($username, $password);
+    $session->set('isLogged', true);
+    $session->set('username', $username);
+    $session->set('password', openssl_encrypt($password, 'AES-256-CBC', $dbConfig['crypt_pw'], 0, $dbConfig['crypt_iv']));
+    redirect('?');
+  } catch (\Exception $e) {
+    $session->set('isLogged', false);
+    $session->getFlashBag()->add('login_errors', $e->getMessage());
+    sleep(3);
+  }
+}
+
+// handle logout
+if (isset($_GET['logout'])) {
+  $session->clear();
+  $session->set('isLogged', false);
+  redirect('?');
+}
+
 ?><!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <link rel="icon" type="image/png" href="i/duck.png">
   <link rel="stylesheet" type="text/css" href="style.css">
-  <title>Střelené kachny</title>
+  <title>Kačice z našej police</title>
   <link rel="stylesheet" href="jquery-ui.min.css">
   <script src="jquery-2.1.4.min.js"></script>
   <script src="jquery-ui.min.js"></script>
   <script src="jquery.ui.touch-punch.min.js"></script>
 </head>
 <body>
-<p>Development verzia [websocket]</p>
 <?php
-
-if (!isset($_SESSION['login']) || !$_SESSION['login']) {
-  echo '<p>';
-  echo '<form method="post">';
-  echo '<table>';
-  echo '<tr><td>Login:</td><td><input type="text" name="uname" size="16" value=""></td></tr>';
-  echo '<tr><td>Pass:</td><td><input type="password" name="upass" size="16" value=""></td></tr>';
-  echo '<tr><td colspan="2"><input type="submit" name="lsub" value="Login"></td></tr>';
-  echo '</table>';
-  echo '</form>';
-  echo '</p>';
+if (!$session->get('isLogged', false)) {
+  echo '<p>' . implode('<br>', $session->getFlashBag()->get('login_errors')) .'</p>';
+  ?>
+  <div style="margin: 15px">
+    <form method="post">
+      <table>
+        <tr>
+          <td><label for="uname">Login:</label></td>
+          <td><input id="uname" type="text" name="uname" size="16" value=""></td>
+        </tr>
+        <tr>
+          <td><label for="upass">Pass:</label></td>
+          <td><input id="upass" type="password" name="upass" size="16" value=""></td>
+        </tr>
+        <tr>
+          <td colspan="2"><input type="submit" name="lsub" value="Login"></td>
+        </tr>
+      </table>
+    </form>
+  </div>
+<?php
+  echo '</body></html>';
   exit();
-} // not logged in
+}
 
 echo '<div class="menicko">'; // meníčko
 echo '<a href="?logout=1">Logout</a>&nbsp;&nbsp;';
@@ -46,43 +93,8 @@ echo '</div>';
 
 $ui = new GUI();
 
-?>
-<script>
-function game_new() {
-  var title = prompt("Zadaj meno hry");
-  if ((title == null) || (title == '')) return;
-	
-  //noinspection JSUnresolvedFunction
-  $.post("ajax.php", {
-    cmd: "game_new",
-    title: title
-  }, function(data) {
-    window.location.replace("?gid="+data);
-  });
-}
-</script>
-<?php
-$db = DB::getInstance();
-$uid=$_SESSION['uid'];
-if ($gid==0) { // no game selected
-
-	// cleanup inactive games after 60 minutes since creation
-	$db->q("DELETE FROM game_kacky WHERE g_active=0 AND TIMESTAMPDIFF(MINUTE, g_ts, NOW()) > 60");
-	// cleanup active games after 1 day since last activity, and finished games after 30 minutes since last activity
-	$db->q(
-	  "DELETE FROM game_kacky
-    USING game_kacky
-      LEFT JOIN (
-        SELECT g_id, COALESCE(TIMESTAMPDIFF(MINUTE, MAX(m_ts), NOW()), 10000) AS age
-        FROM message
-        GROUP BY g_id
-      ) AS t2 USING (g_id)
-    WHERE (g_active=1 AND age > 1440) OR (g_active=2 AND age > 30)"
-  );
-
+if ($gameId == 0) { // no game selected
 	echo '<div style="margin:15px">';
-	if ($res->num_rows > 10) echo '<button onclick="game_new()">Nová hra</button>';
-	if ($res->num_rows) {
 		echo '<table class="simple">';
 		echo '<thead>';
 		echo '<tr><th>id</th><th>Názov</th><th>Hráči</th><th>Stav</th></tr>';
@@ -98,7 +110,6 @@ if ($gid==0) { // no game selected
 		$res->close();
 		echo '</tbody>';
 		echo '</table>';
-	} else echo 'Hra ešte nebola vytvorená.<br>';
 	echo '<br><button onclick="game_new()">Nová hra</button>';
 	echo '</div>';
 } else { // game selected
@@ -117,4 +128,5 @@ if ($gid==0) { // no game selected
 		$ui->show_game($gid, -1);
 	}
 }
-?></body></html>
+?>
+</body></html>

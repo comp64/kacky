@@ -36,9 +36,22 @@ class User implements ObjectWithId {
    * User constructor.
    * @param ConnectionInterface $socket
    */
-  public function __construct(ConnectionInterface $socket) {
+  public function __construct(ConnectionInterface $socket=null) {
     $this->socket = $socket;
     $this->game_id = null;
+  }
+
+  /**
+   * load from DB and verify password
+   * @param string $username
+   * @param string $password
+   * @throws \Exception
+   */
+  public function verifyFromDB(string $username, string $password) {
+    $this->loadFromDB(null, $username);
+    if (($this->getId() === null) || !$this->verifyPassword($password)) {
+      throw new \Exception('Invalid user or password');
+    }
   }
 
   /**
