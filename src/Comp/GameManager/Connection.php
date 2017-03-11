@@ -2,7 +2,9 @@
 namespace Comp\GameManager;
 
 use Ratchet\ConnectionInterface;
-use Symfony\Component\HttpFoundation\Session\Session;
+use Ratchet\Session\Serialize\PhpHandler;
+use Symfony\Component\HttpFoundation\Session\Storage\Handler\PdoSessionHandler;
+use Comp\Kacky\DB;
 
 /**
  * Class Connection
@@ -44,11 +46,23 @@ class Connection implements ConnectionInterface {
   }
 
   /**
-   * Get the Session object
-   * @return Session
+   * Get the Session data
+   * @param array $config
+   * @return array
    */
-  public function getSession() {
+  public function getSession(array $config) {
     /** @noinspection PhpUndefinedFieldInspection */
-    return $this->connectionInterface->Session;
+    $session_id = $this->connectionInterface->WebSocket->request->getCookie($config['session_name']);
+    if ($session_id === null) {
+      return [];
+    }
+
+    $handler = new PdoSessionHandler(DB::getPDO($config), ['db_table' => $config['session_table']]);
+    $handler->open('', $config['session_name']);
+    $rawData = $handler->read($session_id);
+    $handler->close();
+
+    $handler = new PhpHandler();
+    return $handler->unserialize($rawData)['_sf2_attributes'];
   }
 }

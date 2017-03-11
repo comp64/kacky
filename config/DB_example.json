@@ -3,5 +3,7 @@
   "pass": "DB password",
   "db": "DB database name",
   "host": "DB host",
-  "ws-uri": "Websocket connection URI"
+  "session_table": "Table name to store sessions using PDOSessionHandler",
+  "session_name": "Session name (arbitrary string)"
+  "ws_uri": "Websocket connection URI",
 }

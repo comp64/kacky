@@ -5,6 +5,7 @@ use Ratchet\ConnectionInterface;
 use Ratchet\MessageComponentInterface;
 use Comp\Kacky\Game;
 use Comp\Kacky\Model\User;
+use Comp\Kacky\DB;
 
 class Server implements MessageComponentInterface, GameServer {
 
@@ -19,14 +20,14 @@ class Server implements MessageComponentInterface, GameServer {
   private $gameList;
 
   /**
-   * @var ConnectionInterface[]
+   * @var array
    */
-  private $userIndex;
+  private $config;
 
   public function __construct() {
     $this->userList = [];
     $this->gameList = [];
-    $this->userIndex = [];
+    $this->config = DB::getConfig();
   }
 
   /**
@@ -49,10 +50,6 @@ class Server implements MessageComponentInterface, GameServer {
     $conn = new Connection($conn);
     $conn_id = $conn->getId();
 
-    $user_id = $this->userList[$conn_id]->getId();
-    if ($user_id !== null) {
-      unset($this->userIndex[$user_id]);
-    }
     unset($this->userList[$conn_id]);
   }
 
@@ -143,12 +140,9 @@ class Server implements MessageComponentInterface, GameServer {
         case 'authenticate':
           if (!array_key_exists('username', $args)) {
             // try session authentication instead
-            $session = $user->getSocket()->getSession();
-            //$logged = $session->get('isLogged', false);
-            $logged = true;
-            //$userId = $session->get('userId');
-            $userId = 1;
-            //$session->save();
+            $session = $user->getSocket()->getSession($this->config);
+            $logged = $session['isLogged'] ?? false;
+            $userId = $session['userId'] ?? 0;
             if ($logged) {
               $user->loadFromDB($userId);
             } else {
@@ -161,8 +155,6 @@ class Server implements MessageComponentInterface, GameServer {
 
             $user->verifyFromDB($username, $password);
           }
-          // make a user_id -> socket mapping
-          $this->userIndex[$user->getId()] = $user->getSocket();
 
           // if the user was in a game
           // put him there directly

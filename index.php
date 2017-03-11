@@ -9,8 +9,8 @@ include('vendor/autoload.php');
 
 // prepare Session
 $dbConfig = DB::getConfig();
-$session = new Session(new NativeSessionStorage([], new PdoSessionHandler(DB::getPDO($dbConfig), ['db_table'=>'session'])));
-$session->setName('kacky_wi');
+$session = new Session(new NativeSessionStorage([], new PdoSessionHandler(DB::getPDO($dbConfig), ['db_table'=>$dbConfig['session_table']])));
+$session->setName($dbConfig['session_name']);
 
 $gameId = $_GET['gid'] ?? 0;
 $gameId*=1;
@@ -181,7 +181,7 @@ else {
 
   <script>
     var gid = <?= $gameId ?>;
-    var ws_uri = '<?= $dbConfig['ws-uri'] ?>';
+    var ws_uri = '<?= $dbConfig['ws_uri'] ?>';
   </script>
   <!-- javascript gui functionality -->
   <script src="assets/gui.js"></script>
