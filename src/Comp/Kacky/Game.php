@@ -1039,4 +1039,17 @@ class Game {
     $this->id = $id;
   }
 
+  /**
+   * @return int
+   */
+  public function getActive() {
+    return $this->active;
+  }
+
+  /**
+   * @return string
+   */
+  public function getTitle() {
+    return $this->title;
+  }
 }

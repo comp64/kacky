@@ -1,8 +1,9 @@
 body {
 	position: relative;
-  margin: 0px;
-  padding: 0px;
-  font-family: "Verdana";
+  margin: 0;
+  padding: 0;
+  font-size: 14px;
+  font-family: Verdana, serif;
   background-color: #FFF;
   min-width: 1232px;
   min-height: 717px;
@@ -14,6 +15,14 @@ body {
 
 .ok {
   color: #00FF00;
+}
+
+.maincontent {
+  margin: 15px;
+}
+
+.game-template {
+  display: none;
 }
 
 td.column1 {
@@ -39,7 +48,7 @@ div.statusbar {
 div.river {
 	position: relative;
   text-align: center;
-  margin: 30px auto 0px auto;
+  margin: 30px auto 0 auto;
   width: 972px;
   height: 200px;
 }
@@ -49,7 +58,7 @@ div.any-card {
 	position: relative;
   float: left;
   background-color: #FFF;
-  margin: 0px 2px 0px 2px;
+  margin: 0 2px;
   border: 4px solid black;
   border-radius: 10px;
   width: 150px;
@@ -78,8 +87,8 @@ img.duck, img.actioncard {
 
 img.target {
   position: absolute;
-  left: 0px;
-  top: 0px;
+  left: 0;
+  top: 0;
   width: 150px;
 	z-index: 100;
 }
@@ -111,7 +120,7 @@ div.hand {
 
 div.hand-inner {
 	position: relative;
-  margin: 90px auto 0px;
+  margin: 90px auto 0;
   width: 486px;
 }
 
@@ -130,7 +139,7 @@ div.debug {
 div.message-box {
 	width: 286px;
 	height: 450px;
-	margin: 30px 5px 0px 5px;
+	margin: 30px 5px 0 5px;
 	padding: 5px;
 	background-color: #FFF;
 	border: 2px solid black;
@@ -139,12 +148,12 @@ div.message-box {
 
 div.message-box div {
 	font-size: 12px;
-	margin: 4px 0px;
+	margin: 4px 0;
 }
 
 div.message-input {
 	width: 296px;
-	margin: 5px 5px 0px 5px;
+	margin: 5px 5px 0 5px;
 }
 
 #message-input {
@@ -202,3 +211,24 @@ span.msg-col4 { color: #FFC300; }
 span.msg-col5 { color: #F4F; }
 
 span.msg-sys0 { color: #000; }
+
+form {
+  margin: 5px 15px;
+}
+
+label {
+  font-weight: bold;
+}
+
+input {
+  margin: 5px 4px;
+  min-height: 28px;
+}
+
+button, input[type=submit]{
+  padding: 5px 10px;
+  background-color: #1c94c4;
+  color: #eee;
+  border: 1px solid #1f97c7;
+  border-radius: 2px;
+}

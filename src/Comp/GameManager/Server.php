@@ -35,9 +35,9 @@ class Server implements MessageComponentInterface, GameServer {
    * @throws \Exception
    */
   function onOpen(ConnectionInterface $conn) {
-    /** @noinspection PhpUndefinedFieldInspection */
-    $conn_id = $conn->resourceId;
-    $this->userList[$conn_id] = new User($conn);
+    // Wrap the Connection immediately to get access to the magic fields
+    $conn = new Connection($conn);
+    $this->userList[$conn->getId()] = new User($conn);
   }
 
   /**
@@ -46,8 +46,8 @@ class Server implements MessageComponentInterface, GameServer {
    * @throws \Exception
    */
   function onClose(ConnectionInterface $conn) {
-    /** @noinspection PhpUndefinedFieldInspection */
-    $conn_id = $conn->resourceId;
+    $conn = new Connection($conn);
+    $conn_id = $conn->getId();
 
     $user_id = $this->userList[$conn_id]->getId();
     if ($user_id !== null) {
@@ -78,8 +78,8 @@ class Server implements MessageComponentInterface, GameServer {
       $message = new Message('');
       $message->decode($msg);
 
-      /** @noinspection PhpUndefinedFieldInspection */
-      $resourceId = $from->resourceId;
+      $from = new Connection($from);
+      $resourceId = $from->getId();
       $this->processMessage($this->userList[$resourceId], $message->getCmd(), $message->getArgs());
     } catch(\Exception $e) {
       $from->send(Message::error($e->getMessage()));
@@ -137,29 +137,39 @@ class Server implements MessageComponentInterface, GameServer {
     try {
       switch ($cmd) {
         case 'authenticate':
-          $username = $args['username'] ?? '';
-          $password = $args['password'] ?? '';
+          if (!array_key_exists('username', $args)) {
+            // try session authentication instead
+            $session = $user->getSocket()->getSession();
+            //$logged = $session->get('isLogged', false);
+            $logged = true;
+            //$userId = $session->get('userId');
+            $userId = 1;
+            //$session->save();
+            if ($logged) {
+              $user->loadFromDB($userId);
+            } else {
+              throw new \Exception('Session not authenticated');
+            }
+          } else {
+            // go for a traditional user/pass auth
+            $username = $args['username'] ?? '';
+            $password = $args['password'] ?? '';
 
-          $user->verifyFromDB($username, $password);
-
+            $user->verifyFromDB($username, $password);
+          }
           // make a user_id -> socket mapping
           $this->userIndex[$user->getId()] = $user->getSocket();
 
-          // if the user was in game
+          // if the user was in a game
           // put him there directly
-          $previous_game = null;
           foreach ($this->gameList as $game_id => $game) {
-            if (array_key_exists($user->getId(), $game->getUserIds())) {
+            if (array_key_exists($user->getId(), $game->getWaitingUsers())) {
               $user->setGameId($game_id);
-              $previous_game = $game_id;
               break;
             }
           }
-          if ($previous_game !== null) {
-            $user->send(new Message('ok', ['text'=>'Authenticated in game ' . $previous_game, 'game_id'=>$previous_game]));
-          } else {
-            $user->send(new Message('ok', ['text'=>'Authenticated', 'gameList'=>$this->gameListing($user)]));
-          }
+
+          $user->send(Message::ok('Authenticated'));
 
           break;
 
@@ -168,7 +178,7 @@ class Server implements MessageComponentInterface, GameServer {
             throw new NotLoggedInException();
           }
 
-          $user->send(new Message('ok', ['gameList' => $this->gameListing($user)]));
+          $user->send(new Message('gameList', $this->gameListing($user)));
           break;
 
         case 'gameNew':
@@ -238,7 +248,7 @@ class Server implements MessageComponentInterface, GameServer {
 
           if (array_key_exists($user->getGameId(), $this->gameList)) {
             $leaving_game = $this->gameList[$user->getGameId()];
-            $leaving_game->removeUserId($user->getId());
+            $leaving_game->removeWaitingUser($user->getId());
             $this->sendMany($leaving_game->getWaitingUsers(), new Message('gameLeave', ['user_id', $user->getId()]));
           }
           $user->send(Message::ok('Left game ' . $user->getGameId()));

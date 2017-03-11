@@ -1,9 +1,9 @@
 <?php
 namespace Comp\Kacky\Model;
 
+use Comp\GameManager\Connection;
 use Comp\GameManager\ObjectWithId;
 use Comp\Kacky\DB;
-use Ratchet\ConnectionInterface;
 
 class User implements ObjectWithId {
 
@@ -23,7 +23,7 @@ class User implements ObjectWithId {
   private $passhash;
 
   /**
-   * @var ConnectionInterface
+   * @var Connection
    */
   private $socket;
 
@@ -34,11 +34,15 @@ class User implements ObjectWithId {
 
   /**
    * User constructor.
-   * @param ConnectionInterface $socket
+   * @param Connection $socket
    */
-  public function __construct(ConnectionInterface $socket=null) {
+  public function __construct(Connection $socket=null) {
     $this->socket = $socket;
     $this->game_id = null;
+  }
+
+  public function __destruct() {
+    $this->socket = null;
   }
 
   /**
@@ -111,14 +115,14 @@ class User implements ObjectWithId {
    * @param string $password
    * @return bool
    */
-  public function verifyPassword(string $password): bool {
+  public function verifyPassword(string $password) {
     return sha1($this->name . ':game:' . $password) === $this->passhash;
   }
 
   /**
-   * @return ConnectionInterface
+   * @return Connection
    */
-  public function getSocket(): ConnectionInterface {
+  public function getSocket() {
     return $this->socket;
   }
 

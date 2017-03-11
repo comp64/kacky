@@ -1,5 +1,4 @@
 <?php
-use Comp\Kacky\GUI;
 use Comp\Kacky\DB;
 use Comp\Kacky\Model\User;
 use Symfony\Component\HttpFoundation\Session\Session;
@@ -12,7 +11,6 @@ include('vendor/autoload.php');
 $dbConfig = DB::getConfig();
 $session = new Session(new NativeSessionStorage([], new PdoSessionHandler(DB::getPDO($dbConfig), ['db_table'=>'session'])));
 $session->setName('kacky_wi');
-$session->start();
 
 $gameId = $_GET['gid'] ?? 0;
 $gameId*=1;
@@ -31,7 +29,7 @@ if (isset($_POST['lsub'])) {
     $user->verifyFromDB($username, $password);
     $session->set('isLogged', true);
     $session->set('username', $username);
-    $session->set('password', openssl_encrypt($password, 'AES-256-CBC', $dbConfig['crypt_pw'], 0, $dbConfig['crypt_iv']));
+    $session->set('userId', $user->getId());
     redirect('?');
   } catch (\Exception $e) {
     $session->set('isLogged', false);
@@ -51,28 +49,31 @@ if (isset($_GET['logout'])) {
 <html>
 <head>
   <meta charset="utf-8">
-  <link rel="icon" type="image/png" href="i/duck.png">
-  <link rel="stylesheet" type="text/css" href="style.css">
+  <link rel="icon" type="image/png" href="assets/i/duck.png">
+  <link rel="stylesheet" type="text/css" href="assets/style.css">
   <title>Kačice z našej police</title>
-  <link rel="stylesheet" href="jquery-ui.min.css">
-  <script src="jquery-2.1.4.min.js"></script>
-  <script src="jquery-ui.min.js"></script>
-  <script src="jquery.ui.touch-punch.min.js"></script>
+  <link rel="stylesheet" href="assets/jquery/jquery-ui.min.css">
+  <script src="assets/jquery/jquery-2.1.4.min.js"></script>
+  <script src="assets/jquery/jquery-ui.min.js"></script>
+  <script src="assets/jquery/jquery.ui.touch-punch.min.js"></script>
 </head>
 <body>
 <?php
 if (!$session->get('isLogged', false)) {
-  echo '<p>' . implode('<br>', $session->getFlashBag()->get('login_errors')) .'</p>';
   ?>
-  <div style="margin: 15px">
+  <div class="maincontent">
+    <h2>Kačice z našej police</h2>
+    <?php
+    echo '<p>' . implode('<br>', $session->getFlashBag()->get('login_errors')) .'</p>';
+    ?>
     <form method="post">
       <table>
         <tr>
-          <td><label for="uname">Login:</label></td>
+          <td><label for="uname">Username:</label></td>
           <td><input id="uname" type="text" name="uname" size="16" value=""></td>
         </tr>
         <tr>
-          <td><label for="upass">Pass:</label></td>
+          <td><label for="upass">Password:</label></td>
           <td><input id="upass" type="password" name="upass" size="16" value=""></td>
         </tr>
         <tr>
@@ -82,51 +83,111 @@ if (!$session->get('isLogged', false)) {
     </form>
   </div>
 <?php
-  echo '</body></html>';
-  exit();
 }
 
-echo '<div class="menicko">'; // meníčko
-echo '<a href="?logout=1">Logout</a>&nbsp;&nbsp;';
-echo '<a href="?">Zoznam hier</a>';
-echo '</div>';
+else {
+?>
+  <div class="menicko">
+    <a href="?logout=1">Logout</a>&nbsp;&nbsp;
+    <a href="?">Zoznam hier</a>
+  </div>
 
-$ui = new GUI();
+  <!-- Herna plocha pocas hry -->
+  <div data-phase="inGame" style="display:none">
+    <!-- statusbar -->
+    <div class="statusbar">
+      <table class="lives">
+        <tr id="lives-row">
+          <td class="player"></td>
+          <td class="player"></td>
+          <td class="player"></td>
+          <td class="player"></td>
+          <td class="player"></td>
+          <td class="player"></td>
+        </tr>
+      </table>
+    </div>
 
-if ($gameId == 0) { // no game selected
-	echo '<div style="margin:15px">';
-		echo '<table class="simple">';
-		echo '<thead>';
-		echo '<tr><th>id</th><th>Názov</th><th>Hráči</th><th>Stav</th></tr>';
-		echo '</thead><tbody>';
-		while($row=$res->fetch_assoc()) {
-			echo '<tr>';
-			echo '<td>'.$row['g_id'].'</td>';
-			echo '<td><a href="?gid='.$row['g_id'].'">'.$row['g_title'].'</a></td>';
-			echo '<td>'.$row['g_players'].'</td>';
-			echo '<td>'.($row['g_active']?(($row['g_active']>1)?'ukončená':'prebieha'):'pripravená').'</td>';
-			echo '</tr>';
-		}
-		$res->close();
-		echo '</tbody>';
-		echo '</table>';
-	echo '<br><button onclick="game_new()">Nová hra</button>';
-	echo '</div>';
-} else { // game selected
+    <!-- column 1 - game -->
+    <table class="content">
+      <tr>
+        <td class="column1">
+          <!-- river -->
+          <div id="river" class="river"></div>
 
-  if (is_null($row)) {
-    echo '<p>Neplatná hra</p>';
-    exit();
-  }
-  
-  if ($row['g_active']) {
-		$game=unserialize(base64_decode($row['g_data']));
-		$pid=$game->get_player_id_by_name($_SESSION['uname']);
-		if ($pid!==false) 
-			$ui->show_game($gid, $pid);
-  } else {
-		$ui->show_game($gid, -1);
-	}
+          <!-- pile -->
+          <div id="pile" class="pile">
+            <div class="pile-card"></div>
+          </div>
+
+          <!-- hand -->
+          <div class="hand">
+            <div id="hand-inner" class="hand-inner"></div>
+          </div>
+
+          <!-- deck -->
+          <div id="deck" class="deck">
+            <div class="deck-card"></div>
+          </div>
+
+          <!-- debug -->
+          <div id="debug0" class="debug"></div>
+
+        </td>
+        <!-- end column 1 - game -->
+        <!-- column 2 - messages -->
+        <td class="column2">
+
+          <!-- text messaging -->
+          <div id="message-box" class="message-box"></div>
+          <div class="message-input">
+            <input id="message-input" type="text" name="msg-input" value="" placeholder="vylej si srdce&hellip;" disabled="disabled">
+          </div>
+
+        </td>
+        <!-- column 2 -->
+      </tr>
+    </table>
+  </div>
+
+  <!-- Cakanie na vsetkych hracov pred spustenim hry -->
+  <div class="maincontent" data-phase="beforeGame" style="display:none">
+    <h2 id="gtitle"></h2>
+    <p id="gcount"></p>
+
+    <table id="tplayers"></table>
+    <button type="button" onclick="unsubscribe()">Odhlásiť sa z hry</button>
+    <button id="bstart" type="button" style="display:none" onclick="game_start()">Začať hru</button>
+  </div>
+
+  <!-- Zoznam hier -->
+  <div class="maincontent" data-phase="noGame">
+    <h2>Kačice z našej police</h2>
+    <table class="simple">
+      <thead>
+      <tr><th>id</th><th>Názov</th><th>Hráči</th><th>Stav</th></tr>
+      </thead>
+      <tbody id="tb-game-list">
+      <tr class="game-template">
+        <td class="game-id"></td>
+        <td class="game-title"></td>
+        <td class="game-players"></td>
+        <td class="game-active"></td>
+      </tr>
+      </tbody>
+    </table>
+    <br><button onclick="game_new()">Nová hra</button>
+  </div>
+
+  <script>
+    var gid = <?= $gameId ?>;
+    var ws_uri = '<?= $dbConfig['ws-uri'] ?>';
+  </script>
+  <!-- javascript gui functionality -->
+  <script src="assets/gui.js"></script>
+
+  <?php
 }
 ?>
-</body></html>
+</body>
+</html>
