@@ -5,7 +5,7 @@ class Queue {
 	private $items;
 	
 	function __construct() {
-		$this->items = array();
+		$this->items = [];
 	}
 	
 	/**
@@ -14,7 +14,7 @@ class Queue {
 	 * @return object
 	 */
 	public function get() {
-		return array_shift ( $this->items );
+		return array_shift($this->items);
 	}
 
 	/**
@@ -34,7 +34,7 @@ class Queue {
 	 * function 'shuffle' shuffles the items
 	 */
 	public function shuffle() {
-		shuffle ( $this->items );
+		shuffle($this->items);
 		return $this->items;
 	}
 	
@@ -44,5 +44,9 @@ class Queue {
 	public function get_items() {
 		return $this->items;
 	}
+
+  public function __toString() {
+    return sprintf("Queue: [items:\n%s]\n", implode("", $this->items));
+  }
 }
 ?>

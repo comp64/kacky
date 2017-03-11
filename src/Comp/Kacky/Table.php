@@ -2,10 +2,25 @@
 namespace Comp\Kacky;
 
 class Table {
+  /**
+   * @var Duck[]
+   */
 	private $ducksOnBoard;
+  /**
+   * @var Queue
+   */
 	private $ducksInDeck;
+  /**
+   * @var array
+   */
 	private $targeted;
+  /**
+   * @var Stack
+   */
 	private $cardTrash;
+  /**
+   * @var Stack
+   */
 	private $cardPile;
 	
 	// constants

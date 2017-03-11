@@ -151,4 +151,8 @@ class ActionCard {
 	public function get_description() {
 		return $this->description;
 	}
+
+	public function __toString() {
+    return sprintf("ActionCard: [id: %d, name: %s]\n", $this->id, $this->name);
+  }
 }

@@ -176,7 +176,7 @@ else {
       </tr>
       </tbody>
     </table>
-    <br><button onclick="game_new()">Nová hra</button>
+    <br><button type="button" onclick="game_new()">Nová hra</button>
   </div>
 
   <script>

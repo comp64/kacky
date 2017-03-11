@@ -105,5 +105,8 @@ class Duck {
 		if (is_null($this->card->get_card())) return self::DUCK;
 		return self::DUCK_PROT;
 	}
+
+	public function __toString() {
+    return sprintf("Duck: [color: %d, protection: %d, card: \n%s]\n", $this->color, $this->protection, $this->card??'-');
+  }
 }
-?>

@@ -118,6 +118,10 @@ class Server implements MessageComponentInterface, GameServer {
   }
 
   private function gameJoin(User $user, Game $game) {
+    if ($game->getActive()) {
+      throw new \Exception('Game already started');
+    }
+
     if (count($game->getWaitingUsers()) > Game::P_MAX) {
       throw new \Exception('Too many players');
     }
@@ -248,11 +252,20 @@ class Server implements MessageComponentInterface, GameServer {
 
           if (array_key_exists($user->getGameId(), $this->gameList)) {
             $leaving_game = $this->gameList[$user->getGameId()];
+            if ($leaving_game->getActive()) {
+              throw new \Exception('Game already started');
+            }
+
             $leaving_game->removeWaitingUser($user->getId());
             $this->sendMany($leaving_game->getWaitingUsers(), new Message('gameLeave', ['user_id', $user->getId()]));
           }
           $user->send(Message::ok('Left game ' . $user->getGameId()));
           $user->setGameId(null);
+          break;
+
+        case 'debug':
+          echo "UserList: [\n".implode("", $this->userList)."]\n";
+          echo "GameList: [\n".implode("", $this->gameList)."]\n";
           break;
 
         // all other messages are forwarded to the game itself
@@ -266,7 +279,7 @@ class Server implements MessageComponentInterface, GameServer {
           }
 
           $in_game = $this->gameList[$user->getGameId()];
-          $in_game->getGame()->processMessage($user, $cmd, $args, $this);
+          $in_game->processMessage($user, $cmd, $args, $this);
 
           break;
       }
@@ -276,8 +289,10 @@ class Server implements MessageComponentInterface, GameServer {
   }
 
   public function send(ObjectWithId $user, string $msg) {
-    if (array_key_exists($user->getId(), $this->userIndex)) {
-      $this->userIndex[$user->getId()]->send($msg);
+    foreach($this->userList as $connected_user) {
+      if ($connected_user->getId() == $user->getId()) {
+        $connected_user->send($msg);
+      }
     }
   }
 

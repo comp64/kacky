@@ -146,4 +146,8 @@ class User implements ObjectWithId {
   public function send(string $msg) {
     $this->socket->send($msg);
   }
+
+  public function __toString() {
+    return sprintf("User: [id: %d, name: %s, socketId: %d, gameId: %s]\n", $this->id, $this->name, $this->getSocket()->getId(), $this->game_id??'-');
+  }
 }

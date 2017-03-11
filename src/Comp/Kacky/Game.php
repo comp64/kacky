@@ -4,7 +4,6 @@ namespace Comp\Kacky;
 use Comp\GameManager\Message;
 use Comp\GameManager\GameServer;
 use Comp\GameManager\ObjectWithId;
-use Comp\Kacky\Model\WaitingUser;
 
 class Game {
 
@@ -29,7 +28,7 @@ class Game {
   private $timestamp;
 
   /**
-   * players in started game
+   * players in game
    * @var Player[]
    */
 	private $players;
@@ -46,12 +45,6 @@ class Game {
 	// is game over?
 	private $gameOver;
 
-	/**
-   * users gathering for the game. these are converted to $players upon game start
-   * @var WaitingUser[]
-   */
-	private $waitingUsers;
-
 	const P_MIN = 2;
 	const P_MAX = 6;
 	
@@ -64,21 +57,17 @@ class Game {
     $this->title = $title;
     $this->timestamp = time();
 		$this->players = [];
-		$this->waitingUsers = [];
 		$this->gameOver = false;
   }
 
   public function start() {
-    $nOP = count($this->waitingUsers);
+    $nOP = count($this->players);
 
     if ($nOP < Game::P_MIN || $nOP > Game::P_MAX) {
       throw new \Exception('Incorrect number of players');
     }
 
     // initialize private properties
-    foreach ($this->waitingUsers as $user) {
-      $this->players[] = new Player($user->getId(), $user->getName(), $user->getColor());
-    }
     $this->table = new Table($this->players);
     $this->activePlayer = rand(0, count($this->players) - 1);
 
@@ -121,7 +110,7 @@ class Game {
 	}
 
 	private function get_player_name_by_river_pos($pos) {
-		$duck = $this->table->get_ducks_on_board () [$pos];
+		$duck = $this->table->get_ducks_on_board()[$pos];
 		if ($duck->get_features() == Duck::DUCK)
 			$color = $duck->get_card()->get_color();
 		else
@@ -805,23 +794,10 @@ class Game {
 
 		$state['title'] = $this->title;
 		$state['active'] = $this->active;
-
-		// inactive game lists only the waiting players
-		if (!$this->active) {
-		  $state['waiting_players'] = [];
-		  foreach($this->waitingUsers as $user) {
-		    $state['waiting_players'][] = [
-		      'id' => $user->getId(),
-          'name' => $user->getName(),
-          'color' => $user->getColor()
-        ];
-      }
-      return $state;
-    }
-
 		$state['players'] = [];
 		foreach ($this->players as $k => $player) {
 			$state['players'][$k] = [
+			  'id' => $player->getId(),
 				'name' => $player->getName(),
 				'lives' => $player->getLives(),
 				'color' => $player->getColor(),
@@ -829,6 +805,9 @@ class Game {
 				'on_move' => ($k == $this->activePlayer)
 			];
 		}
+		if (!$this->active) {
+		  return $state;
+    }
 		
 		$state['river'] = [];
 		foreach ($this->table->get_ducks_on_board() as $k => $duck) {
@@ -931,7 +910,7 @@ class Game {
 
         // check if the color is available
         $count = 0;
-        foreach($this->waitingUsers as $waiting_user) {
+        foreach($this->players as $waiting_user) {
           if ($waiting_user->getColor() == $args['color']) {
             $count++;
           }
@@ -940,10 +919,10 @@ class Game {
           throw new \Exception('Color in use');
         }
 
-        $this->waitingUsers[$user->getId()]->setColor($args['color']);
+        $this->players[$user->getId()]->setColor($args['color']);
 
         $ms->send($user, Message::ok('Color changed'));
-        $ms->sendMany($this->waitingUsers, new Message('setColor', ['user_id'=>$user->getId(), 'color'=>$args['color']]));
+        $ms->sendMany($this->players, new Message('setColor', ['user_id'=>$user->getId(), 'color'=>$args['color']]));
         break;
 
       case 'gameDetails':
@@ -1009,19 +988,20 @@ class Game {
   }
 
   /**
-   * @return WaitingUser[]
+   * @return Player[]
    */
   public function getWaitingUsers() {
-    return $this->waitingUsers;
+    return $this->players;
   }
 
   public function addWaitingUser(int $user_id, string $name) {
-    $this->waitingUsers[$user_id] = new WaitingUser($user_id, $name);
+    $this->players[] = new Player($user_id, $name);
   }
 
   public function removeWaitingUser(int $user_id) {
-    if (array_key_exists($user_id, $this->waitingUsers)) {
-      unset($this->waitingUsers[$user_id]);
+    $player_id = $this->get_player_id_by_user_id($user_id);
+    if ($player_id !== false) {
+      array_splice($this->players, $player_id, 1);
     }
   }
 
@@ -1051,5 +1031,11 @@ class Game {
    */
   public function getTitle() {
     return $this->title;
+  }
+
+  public function __toString() {
+    return sprintf("Game: [id: %d, title: %s, active: %d, activePlayer: %d, over: %d, players:\n%s]\n", $this->id,
+      $this->title, $this->active, $this->activePlayer, $this->gameOver?1:0, implode("", $this->players)
+    );
   }
 }
