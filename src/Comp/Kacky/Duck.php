@@ -65,9 +65,9 @@ class Duck {
 		if ($this->protection != 0) {
 			$this->protection -= 1;
 			
-			if ($this->protection == 0 && get_class($this->card) === 'ActionCard') {
+			if ($this->protection == 0 && get_class($this->card) === 'Comp\Kacky\ActionCard') {
 				return $this->remove_card();
-			} elseif (get_class($this->card) === 'Duck') {
+			} elseif (get_class($this->card) === 'Comp\Kacky\Duck') {
 				return $this->card;
 			}
 		}
@@ -111,7 +111,7 @@ class Duck {
    */
 	public function get_features() {
 		if (is_null($this->card)) return self::ONLY;
-		if (get_class($this->card) === 'ActionCard') return self::PROT;
+		if (get_class($this->card) === 'Comp\Kacky\ActionCard') return self::PROT;
 		if (is_null($this->card->get_card())) return self::DUCK;
 		return self::DUCK_PROT;
 	}

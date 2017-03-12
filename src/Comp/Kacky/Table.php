@@ -173,11 +173,11 @@ class Table {
 				$color = $this->ducksOnBoard[$idx]->get_color();
 				array_splice($this->ducksOnBoard, $idx, 1);
 				return $color;
-			} elseif (get_class($this->ducksOnBoard[$idx]->get_card()) === 'ActionCard') {
+			} elseif (get_class($this->ducksOnBoard[$idx]->get_card()) === 'Comp\Kacky\ActionCard') {
 				// do nothing
 				return Player::COLOR_WATER;
-			} elseif (get_class($this->ducksOnBoard[$idx]->get_card()) === 'Duck') {
-				if (get_class($this->ducksOnBoard[$idx]->get_card()->get_card()) === 'ActionCard') {
+			} elseif (get_class($this->ducksOnBoard[$idx]->get_card()) === 'Comp\Kacky\Duck') {
+				if (get_class($this->ducksOnBoard[$idx]->get_card()->get_card()) === 'Comp\Kacky\ActionCard') {
 					// killing the bottom duck
 					$color = $this->ducksOnBoard[$idx]->get_color();
 					$this->ducksOnBoard[$idx] = $this->ducksOnBoard[$idx]->get_card();
@@ -190,11 +190,11 @@ class Table {
 				}
 			}
 		} else {
-			if (get_class($this->ducksOnBoard[$idx]->get_card()) === 'ActionCard') {
+			if (get_class($this->ducksOnBoard[$idx]->get_card()) === 'Comp\Kacky\ActionCard') {
 				// removing action card on the bottom duck
 				$this->cardTrash->push($this->ducksOnBoard[$idx]->remove_card());
-			} elseif (get_class($this->ducksOnBoard[$idx]->get_card()) === 'Duck') {
-				if (get_class($this->ducksOnBoard[$idx]->get_card()->get_card()) === 'ActionCard') {
+			} elseif (get_class($this->ducksOnBoard[$idx]->get_card()) === 'Comp\Kacky\Duck') {
+				if (get_class($this->ducksOnBoard[$idx]->get_card()->get_card()) === 'Comp\Kacky\ActionCard') {
 					// removing action card on the top duck
 					$this->cardTrash->push($this->ducksOnBoard[$idx]->get_card()->remove_card());
 				}
@@ -272,7 +272,7 @@ class Table {
 		if (is_null($this->ducksOnBoard [$idx]->get_card ())) {
 			$this->ducksOnBoard [$idx]->set_protection ( $card, $prot );
 			return true;
-		} elseif (get_class ( $this->ducksOnBoard [$idx]->get_card () ) === 'Duck' && get_class ( $card ) === 'ActionCard') {
+		} elseif (get_class ( $this->ducksOnBoard [$idx]->get_card () ) === 'Comp\Kacky\Duck' && get_class ( $card ) === 'Comp\Kacky\ActionCard') {
 			$this->ducksOnBoard [$idx]->get_card ()->set_protection ( $card, $prot );
 			return true;
 		}

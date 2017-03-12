@@ -222,7 +222,7 @@ class Game {
 				}
 				
 				$river_card = $this->table->get_ducks_on_board () [$cardTable];
-				if (! is_null ( $river_card->get_card () ) && get_class ( $river_card->get_card () ) === 'ActionCard') {
+				if (! is_null ( $river_card->get_card () ) && get_class ( $river_card->get_card () ) === 'Comp\Kacky\ActionCard') {
 					return false;
 				}
 				
@@ -322,7 +322,7 @@ class Game {
 	
 	private function is_duck_on_duck($idx) {
 	  $var = $this->table->get_ducks_on_board () [$idx]->get_card ();
-	  if (!is_null($var) && (get_class($var) === 'Duck')) {
+	  if (!is_null($var) && (get_class($var) === 'Comp\Kacky\Duck')) {
   	  return true;
 	  }
 	  return false;
@@ -344,7 +344,7 @@ class Game {
 			return true;
 		}
 		
-		if (get_class ( $card->get_card () ) === 'Duck' && $card->get_card ()->get_color () == $playerColor) {
+		if (get_class ( $card->get_card () ) === 'Comp\Kacky\Duck' && $card->get_card ()->get_color () == $playerColor) {
 			return true;
 		}
 		
@@ -766,7 +766,7 @@ class Game {
 			$card = $duck->decrease_protection();
 			
 			if (is_null($card)) {
-			} elseif (get_class($card) === 'ActionCard') {
+			} elseif (get_class($card) === 'Comp\Kacky\ActionCard') {
 				$this->table->get_card_trash()->push($card);
 				$unprotect_pos[] = $k;
 			} else {
