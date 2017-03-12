@@ -61,6 +61,11 @@ class Game {
   }
 
   public function start() {
+    $this->gameOver = false; // needs to be here in case of re-start
+    foreach($this->players as $player) {
+      $player->reset();
+    }
+
     $nOP = count($this->players);
 
     if ($nOP < Game::P_MIN || $nOP > Game::P_MAX) {
@@ -69,7 +74,10 @@ class Game {
 
     // initialize private properties
     $this->table = new Table($this->players);
-    $this->activePlayer = rand(0, count($this->players) - 1);
+
+    // shuffle player starting positions
+    shuffle($this->players);
+    $this->activePlayer = 0;
 
     // shuffle deck
     $this->table->get_card_pile()->shuffle();
@@ -806,7 +814,6 @@ class Game {
 			];
 		}
 		if (!$this->active) {
-		  $state['start'] = ((count($this->players) >= Game::P_MIN) && (count($this->players) <= Game::P_MAX));
 		  return $state;
     }
 		

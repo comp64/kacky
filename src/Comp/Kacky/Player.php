@@ -42,10 +42,14 @@ class Player implements ObjectWithId {
 	  $this->id = $id;
 	  $this->name = $name;
 	  $this->color = self::COLOR_WATER;
-		$this->lives = 5;
-		$this->hand = [];
+	  $this->reset();
 	}
-	
+
+	public function reset() {
+	  $this->lives = 5;
+    $this->hand = [];
+  }
+
 	/**
 	 * function 'getColor' returns the numeric value of the color of the player
    * @return int

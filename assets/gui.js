@@ -1,13 +1,6 @@
 /* Message reference
  * m_cmd - name (params)
  *
- * System:
- * 0 Full refresh (void)
- *
- * Game management:
- * 10 Start (void)
- * 11 Player update (void) {pouziva sa ked hra este neni active}
- *
  * Game visuals:
  * 100 Text message (String text)
  *
@@ -22,8 +15,6 @@ var rosambo_river_backup;
 var rosambo_hand_backup;
 var first_show = true;
 var has_played_card = false;
-var timer;
-var timeout = 3000;
 var target_shift = 159;
 
 // color table
@@ -84,7 +75,6 @@ function card_play_click(card_id, param0, param1, param2) {
   var animation_shift=$.Deferred();
 
   has_played_card = true;
-  clearTimeout(timer);
 
   // card movement
   var card_alias = 'h'+card_id;
@@ -544,6 +534,7 @@ function process_targets(data) {
 function show_game_list(data) {
   $('#tb-game-list').empty();
   for (var game_id in data) {
+    if (!data.hasOwnProperty(game_id)) continue;
     var game = data[game_id];
     var gameline = $('<tr><td class="game-id"></td><td class="game-title"></td><td class="game-players"></td><td class="game-active"></td></tr>');
     gameline.find('.game-id').text(game_id);
@@ -571,6 +562,16 @@ function data_ready(data) {
         var game_id = data.args.gameId;
         switch_game_phase('beforeGame');
         window.history.pushState(null, '', '?gid='+game_id);
+        break;
+      case 'gameJoin':
+        append_player({
+          id: data.args.userId,
+          name: data.args.userName,
+          color: -1
+        });
+        break;
+      case 'gameLeave':
+        remove_player(data.args.userId);
         break;
       case 'gameDetails':
         if (data.args.active == 1) {
@@ -707,26 +708,10 @@ function process_state(data) {
 
     $('#tplayers').empty();
     for (var i in data.players) {
+      if (!data.players.hasOwnProperty(i)) continue;
       var p=data.players[i];
-      var line=$('<tr><td><b>'+p.name+'</b> </td></tr>');
-      var tmp1=$('<td></td>');
-      var sel=$('<select name="s_color" data-user="'+p.id+'" onchange="set_color(this)"></select>');
-      var opt;
-
-      if (!p.current) sel.prop('disabled', true);
-      for (var k=-1; k<6; k++) {
-        opt=$('<option value="'+k+'">'+colors[k]+'</option>');
-        if (k == p.color) opt.prop('selected', true);
-        sel.append(opt);
-      }
-
-      tmp1.append(sel);
-      line.append(tmp1);
-      $('#tplayers').append(line);
+      append_player(p);
     }
-
-    if (data.start) $('#bstart').show();
-    else $('#bstart').hide();
 
     return $(null).promise();
   }
@@ -742,15 +727,6 @@ function process_messages(data) {
     var msg=data.messages[i];
 
     switch(msg.cmd) {
-      case 0: // Full refresh
-      case 10: // Game (re)start
-//        window.location.replace('?gid='+gid);
-        break;
-
-      case 11: // Player update (game is not active)
-        // do nothing, data will be parsed
-        break;
-
       case 100: // Text message
         $('#message-box').append('<div>'+msg.text+'</div>').animate({ scrollTop: $('#message-box')[0].scrollHeight}, 1000);
         break;
@@ -829,6 +805,41 @@ function process_messages(data) {
 
   // return one composite promise for every promise in slub array
   return $.when.apply($, slub);
+}
+
+function append_player(p) {
+  var line=$('<tr data-id="p_'+p.id+'"><td><b>'+p.name+'</b> </td></tr>');
+  var tmp1=$('<td></td>');
+  var sel=$('<select name="s_color" data-user="'+p.id+'" onchange="set_color(this)"></select>');
+  var opt;
+
+  if (!p.current) sel.prop('disabled', true);
+  for (var k=-1; k<6; k++) {
+    opt=$('<option value="'+k+'">'+colors[k]+'</option>');
+    if (k == p.color) opt.prop('selected', true);
+    sel.append(opt);
+  }
+
+  tmp1.append(sel);
+  line.append(tmp1);
+  $('#tplayers').append(line);
+
+  show_hide_start_button();
+}
+
+function remove_player(id) {
+  $('#tplayers tr[data-id="p_'+id+'"]').hide('slow', function() {
+    $(this).detach();
+    show_hide_start_button();
+  });
+}
+
+function show_hide_start_button() {
+  if ($('#tplayers tr').length > 1) {
+    $('#bstart').show();
+  } else {
+    $('#bstart').hide();
+  }
 }
 
 function cleanup_click_handlers() {

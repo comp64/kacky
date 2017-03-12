@@ -227,7 +227,9 @@ class Server implements MessageComponentInterface, GameServer {
           $joined_game = $this->gameList[$args['gameId']];
           $this->gameJoin($user, $joined_game);
 
-          $this->sendMany($joined_game->getWaitingUsers(), new Message('gameJoin', ['userId', $user->getId()]));
+          $this->sendMany($joined_game->getWaitingUsers(),
+            new Message('gameJoin', ['userId'=>$user->getId(), 'userName'=>$user->getName()])
+          );
           break;
 
         case 'gameLeave':
@@ -246,7 +248,9 @@ class Server implements MessageComponentInterface, GameServer {
             }
 
             $leaving_game->removeWaitingUser($user->getId());
-            $this->sendMany($leaving_game->getWaitingUsers(), new Message('gameLeave', ['userId', $user->getId()]));
+            $this->sendMany($leaving_game->getWaitingUsers(),
+              new Message('gameLeave', ['userId'=>$user->getId(), 'userName'=>$user->getName()])
+            );
           }
           $user->setGameId(null);
           break;

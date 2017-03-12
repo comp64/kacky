@@ -153,7 +153,6 @@ else {
   <!-- Cakanie na vsetkych hracov pred spustenim hry -->
   <div class="maincontent" data-phase="beforeGame" style="display:none">
     <h2 id="gtitle"></h2>
-<!--    <p id="gcount"></p>-->
 
     <table id="tplayers"></table>
     <br>
