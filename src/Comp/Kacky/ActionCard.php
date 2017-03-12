@@ -2,9 +2,21 @@
 namespace Comp\Kacky;
 
 class ActionCard {
+  /**
+   * @var int
+   */
 	private $id;
+  /**
+   * @var string
+   */
 	private $name;
+  /**
+   * @var string
+   */
 	private $description;
+  /**
+   * @var int
+   */
 	private $param_class;
 	
 	const DIVOKEJ_BILL = 0; // OK

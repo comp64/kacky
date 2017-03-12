@@ -89,7 +89,7 @@ else {
 ?>
   <div class="menicko">
     <a href="?logout=1">Logout</a>&nbsp;&nbsp;
-    <a href="?">Zoznam hier</a>
+    <a href="javascript:back_to_gameList()">Zoznam hier</a>
   </div>
 
   <!-- Herna plocha pocas hry -->
@@ -153,9 +153,10 @@ else {
   <!-- Cakanie na vsetkych hracov pred spustenim hry -->
   <div class="maincontent" data-phase="beforeGame" style="display:none">
     <h2 id="gtitle"></h2>
-    <p id="gcount"></p>
+<!--    <p id="gcount"></p>-->
 
     <table id="tplayers"></table>
+    <br>
     <button type="button" onclick="unsubscribe()">Odhlásiť sa z hry</button>
     <button id="bstart" type="button" style="display:none" onclick="game_start()">Začať hru</button>
   </div>
@@ -168,12 +169,6 @@ else {
       <tr><th>id</th><th>Názov</th><th>Hráči</th><th>Stav</th></tr>
       </thead>
       <tbody id="tb-game-list">
-      <tr class="game-template">
-        <td class="game-id"></td>
-        <td class="game-title"></td>
-        <td class="game-players"></td>
-        <td class="game-active"></td>
-      </tr>
       </tbody>
     </table>
     <br><button type="button" onclick="game_new()">Nová hra</button>

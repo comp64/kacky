@@ -3,11 +3,6 @@
  *
  * System:
  * 0 Full refresh (void)
- * 1 Change interval (int interval)
- * 2 Abort (void)
- *   [rovnaky efekt ako Change interval(0), ale jednoduchsie sa generuje a parsuje]
- *
- * 3 Epoch change / NOP (void)
  *
  * Game management:
  * 10 Start (void)
@@ -22,7 +17,6 @@
  *
  */
 
-var epoch = 0;
 var sorting_rosambo = false;
 var rosambo_river_backup;
 var rosambo_hand_backup;
@@ -43,45 +37,45 @@ var colors = {
   5: 'Ružová'
 };
 
-function subscribe() {
-  $.post('ajax.php', {
-    cmd: 'subscribe',
-    gid: gid,
-    epoch: epoch
-  }, function(data) {
-    data_ready(data);
+function subscribe(gameId) {
+  ws.exec('gameJoin', {
+    gameId: gameId
   });
+  switch_game_phase('beforeGame');
+  ws.exec('gameDetails');
+  window.history.pushState(null, '', '?gid='+gameId);
 }
 
 function unsubscribe() {
-  $.post('ajax.php', {
-    cmd: 'unsubscribe',
-    gid: gid
-  }, function(data) {
-    window.location.replace('?');
-  });
+  ws.exec('gameLeave');
+  back_to_gameList();
+}
+
+function back_to_gameList() {
+  switch_game_phase('noGame');
+  ws.exec('gameList');
+  window.history.pushState(null, '', '?');
 }
 
 function game_start() {
-  $.post('ajax.php', {
-    cmd: 'start',
-    gid: gid
-  }, function(data) {
-    window.location.replace('?gid='+gid);
-  });
+  ws.exec('gameStart');
+  switch_game_phase('inGame');
 }
 
 function game_new() {
+  var title = window.prompt("Zadaj názov hry");
+  if ((title === null) || (title.length == 0)) return;
 
+  ws.exec('gameNew', {
+    title: title
+  });
+
+  ws.exec('gameDetails');
 }
 
 function set_color(e) {
-  $.post('ajax.php', {
-    cmd: 'set_color',
-    gid: gid,
+  ws.exec('setColor', {
     color: e.value
-  }, function(data) {
-    e.value = data;
   });
 }
 
@@ -109,23 +103,16 @@ function card_play_click(card_id, param0, param1, param2) {
     }).promise().then(animation_shift.resolve, animation_shift.reject);
   });
 
-  $.post('ajax.php', {
-    cmd: 'play_card',
-    gid: gid,
+  ws.exec('cardPlay', {
     card_id: card_id,
-    epoch: epoch,
     param0: param0,
     param1: param1,
     param2: param2
-  }, function(data) {
-    if (debug)
-      $('body').append(data);
-    else {
-      $.when(animation_move, animation_shift).always(function() {
-        data_ready(data);
-      });
-    }
   });
+
+//    $.when(animation_move, animation_shift).always(function() {
+//      data_ready(data);
+//    });
 }
 
 // vyber prvu kartu a ponukni druhe karty
@@ -551,19 +538,16 @@ function process_targets(data) {
   } else { // move one target
     return move_target(deleted[0], added[0]);
   }
-  return $(null).promise();
+  //return $(null).promise();
 }
 
 function show_game_list(data) {
-  var gameline = $('.game-template').clone();
   $('#tb-game-list').empty();
-  $('#tb-game-list').append(gameline);
   for (var game_id in data) {
     var game = data[game_id];
-    var gameline = $('.game-template').clone();
-    gameline.removeClass('game-template');
+    var gameline = $('<tr><td class="game-id"></td><td class="game-title"></td><td class="game-players"></td><td class="game-active"></td></tr>');
     gameline.find('.game-id').text(game_id);
-    gameline.find('.game-title').html('<a href="?gid='+game_id+'">'+game.title+'</a>');
+    gameline.find('.game-title').html('<a href="javascript:subscribe('+game_id+')">'+game.title+'</a>');
     gameline.find('.game-players').text(game.players);
     gameline.find('.game-active').text(game.active);
     $('#tb-game-list').append(gameline);
@@ -580,10 +564,21 @@ function data_ready(data) {
       case 'gameList':
         show_game_list(data.args);
         break;
-      case 'cardPlay':
+      case 'setColor':
+        $('select[data-user="'+data.args.userId+'"]').val(data.args.color);
+        break;
+      case 'gameNew':
+        var game_id = data.args.gameId;
+        switch_game_phase('beforeGame');
+        window.history.pushState(null, '', '?gid='+game_id);
+        break;
+      case 'gameDetails':
+        if (data.args.active == 1) {
+          switch_game_phase('inGame');
+        }
         process_messages(data.args).then(
           function () { // done function (process_messages finished all async operations)
-            process_state(data).always(function () {
+            process_state(data.args).always(function () {
               reattach_targets(false);
             });
           },
@@ -598,14 +593,18 @@ function data_ready(data) {
 }
 
 function process_state(data) {
-  if (g_active) {
+  var player_id;
+  if (data.active > 0) {
     // players
     if (first_show) {
       for (var i in data.players) {
         var p = data.players[i];
 
         var name=$('<span>'+p.name+'</span>');
-        if (p.current) name.addClass('this-player');
+        if (p.current) {
+          name.addClass('this-player');
+          player_id = i;
+        }
         if (p.on_move) name.addClass('has-move');
 
         var lives='<span class="duck-lives">';
@@ -617,7 +616,10 @@ function process_state(data) {
     } else {
       for (var i in data.players) {
         var p = data.players[i];
-        var curr = $('.player:eq('+i+') img').length
+        var curr = $('.player:eq('+i+') img').length;
+        if (p.current) {
+          player_id = i;
+        }
         for (var j=curr-1; j>=p.lives; j--)
           $('.player:eq('+i+') img:eq('+j+')').hide('slow', function() {$(this).detach();});
 
@@ -701,28 +703,14 @@ function process_state(data) {
     });
   } // active
   else { // inactive
-    var hracov;
-
-    switch(data.players.length) {
-      case 1: hracov='<span class="warn">1 hráč</span>'; break;
-      case 2: hracov='<span class="warn">2 hráči</span>'; break;
-      case 3:
-      case 4: hracov='<span class="ok">'+data.players.length+' hráči</span>'; break;
-      case 5:
-      case 6: hracov='<span class="ok">'+data.players.length+' hráčov</span>'; break;
-      case 0:
-      default: $hracov='<span class="warn">'+data.players.length+' hráčov</span>'; break;
-    }
-
     $('#gtitle').html(data.title);
-    $('#gcount').html(hracov);
 
     $('#tplayers').empty();
     for (var i in data.players) {
       var p=data.players[i];
-      var line=$('<tr><td>'+p.name+'</td></tr>');
+      var line=$('<tr><td><b>'+p.name+'</b> </td></tr>');
       var tmp1=$('<td></td>');
-      var sel=$('<select name="s_color" onchange="set_color(this)"></select>');
+      var sel=$('<select name="s_color" data-user="'+p.id+'" onchange="set_color(this)"></select>');
       var opt;
 
       if (!p.current) sel.prop('disabled', true);
@@ -753,24 +741,10 @@ function process_messages(data) {
   for (var i in data.messages) {
     var msg=data.messages[i];
 
-    // message is older than epoch - ignore
-    // but process message with special id=-1 (indicating important message)
-    if ((msg.id <= epoch) && (msg.id != -1)) continue;
-
     switch(msg.cmd) {
       case 0: // Full refresh
       case 10: // Game (re)start
-        window.location.replace('?gid='+gid);
-        break;
-      case 1: // Change interval
-        timeout = Math.max(msg.interval, 1000);
-        break;
-      case 2: // Abort (stop refreshing and fail the returned promise chain)
-        timeout = 0;
-        slub.push($.Deferred().reject().promise());
-        break;
-      case 3: // Epoch update / NOP
-        // do nothing, epoch will update itself
+//        window.location.replace('?gid='+gid);
         break;
 
       case 11: // Player update (game is not active)
@@ -851,10 +825,6 @@ function process_messages(data) {
         });
         break;
     }
-
-    // not reached in case of Full refresh message
-    // update epoch after successful completion
-    epoch = msg.id;
   }
 
   // return one composite promise for every promise in slub array
@@ -883,7 +853,7 @@ function add_click_handlers(data) {
     // ukoncime sortovanie v pripade rosambo
     if (sorting_rosambo) {
       sorting_rosambo = false;
-      $('#river').sortable('destroy')
+      $('#river').sortable('destroy');
       $('#river').html(rosambo_river_backup);
     }
 
@@ -916,23 +886,43 @@ function add_click_handlers(data) {
   });
 }
 
-$(function() {
-  WebSocket.prototype.sendJSON = function(data) {
-    this.send(JSON.stringify(data));
-  }
+// change the game view
+function switch_game_phase(phase) {
+  $('[data-phase]').hide();
+  $('[data-phase="'+phase+'"]').show();
+}
 
-  var ws = new WebSocket(ws_uri);
+$(function() {
+  WebSocket.prototype.exec = function(cmd, args) {
+    var data = {cmd: cmd};
+
+    if (args !== undefined) {
+      data.args = args;
+    }
+
+    this.send(JSON.stringify(data));
+  };
+
+  window.ws = new WebSocket(ws_uri);
   ws.onmessage = function(msg) {
     data_ready(JSON.parse(msg.data));
-  }
+  };
 
   ws.onclose = function() {
     console.log('connection closed');
-  }
+  };
 
   ws.onopen = function() {
-    ws.sendJSON({cmd: 'authenticate'});
-    ws.sendJSON({cmd: 'gameList'});
+    ws.exec('authenticate');
+    if (gid == 0) {
+      ws.exec('gameList');
+    } else {
+      ws.exec('gameDetails');
+    }
+  };
+
+  if (gid > 0) {
+    switch_game_phase("beforeGame");
   }
 
   // scroll to the bottom

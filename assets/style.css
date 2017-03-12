@@ -21,10 +21,6 @@ body {
   margin: 15px;
 }
 
-.game-template {
-  display: none;
-}
-
 td.column1 {
 	width: 100%;
 	vertical-align: top;

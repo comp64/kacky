@@ -1,32 +1,50 @@
 <?php
 namespace Comp\Kacky;
 
+/**
+ * Class Stack
+ * Stack and Queue functionality
+ * @package Comp\Kacky
+ */
 class Stack {
+  /**
+   * @var ActionCard[]|Duck[]
+   */
 	private $items;
 	
-	/*
-	 * creates the instance of a stack from array
-	 */
 	function __construct() {
 		$this->items = [];
 	}
-	
-	/*
-	 * function 'isEmpty' tests if stack is empty
-	 */
+
+  /**
+   * @return bool
+   */
 	public function is_empty() {
 		return empty($this->items);
 	}
-	
-	/*
-	 * function 'pop' removes the object at the top of this stack and returns that object as the value of this function.
-	 */
+
+  /**
+   * QUEUE: removes the object at the bottom and returns it
+   *
+   * @return ActionCard|Duck
+   */
+  public function get() {
+    return array_shift($this->items);
+  }
+
+  /**
+   * STACK: removes the object at the top and returns it
+   *
+   * @return ActionCard|Duck
+   */
 	public function pop() {
 		return array_pop($this->items);
 	}
 	
-	/*
-	 * function 'pop' removes the object at the top of this stack and returns that object as the value of this function.
+	/**
+	 * STACK: get the object at the top, return it but do not remove it
+   *
+   * @return ActionCard|Duck|bool
 	 */
 	public function peek() {
 		if ($this->is_empty()) {
@@ -35,29 +53,45 @@ class Stack {
 			return $this->items[count($this->items)-1];
 		}
 	}
-	
-	/*
-	 * function 'push' pushes an item onto the top of this stack.
+
+  /**
+   * QUEUE: adds item to the top
+   *
+   * @param ActionCard|Duck $item
+   */
+  public function add($item) {
+    array_push($this->items, $item);
+  }
+
+	/**
+	 * STACK: pushes an item onto the top
+   *
+   * @param ActionCard|Duck $item
 	 */
 	public function push($item) {
 		array_push($this->items, $item);
 	}
 	
-	/*
-	 * function 'shuffle' shuffles the items
+	/**
+	 * shuffles the items
+   *
+   * @return ActionCard[]|Duck[]
 	 */
 	public function shuffle() {
 		shuffle($this->items);
 		return $this->items;
 	}
 	
-	/*
-	 * function 'getItems' returns the items in the stack
+	/**
+	 * @return ActionCard[]|Duck[]
 	 */
 	public function get_items() {
 		return $this->items;
 	}
-	
+
+  /**
+   * @param ActionCard[]|Duck[] $items
+   */
 	public function set_items($items) {
 		$this->items = $items;
 	}

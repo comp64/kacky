@@ -91,20 +91,20 @@ class Player implements ObjectWithId {
 	}
 	
 	public function decreaseLives() {
-		$this->lives --;
+		$this->lives--;
 	}
 
 	/**
 	 * function 'addCardToHand' adds a card from a pile to the player's hand
    * @param ActionCard $actionCard
+   * @throws \Exception
 	 */
 	public function add_card_to_hand($actionCard) {
-		if (count ( $this->hand ) == 3) {
-			trigger_error ( 'Player has already 3 card in the hand' );
-			return;
+		if (count($this->hand) == 3) {
+			throw new \Exception('Player has already 3 card in the hand');
 		}
-		
-		$this->hand [] = $actionCard;
+
+		$this->hand[] = $actionCard;
 	}
 	
 	/**

@@ -2,7 +2,13 @@
 namespace Comp\Kacky;
 
 class Duck {
+  /**
+   * @var int
+   */
 	private $color;
+  /**
+   * @var int
+   */
 	private $protection;
   /**
    * @var ActionCard|Duck
@@ -28,7 +34,7 @@ class Duck {
 	/**
 	 * Returns the numeric value of the color of this duck.
 	 *
-	 * @return Integer $color value
+	 * @return int $color
 	 */
 	public function get_color() {
 		return $this->color;
@@ -80,7 +86,7 @@ class Duck {
 	
 	/**
 	 * function 'removeCard' returns the action (id=10, Kachní únik) card on the duck
-   * @return ActionCard
+   * @return ActionCard|Duck
 	 */
 	public function remove_card() {
 		$temp = $this->card;
@@ -89,8 +95,8 @@ class Duck {
 		return $temp;
 	}
 	
-	/*
-	 * function 'resetDuck' resets duck
+	/**
+	 * @return Duck
 	 */
 	public function reset() {
 		$this->protection = 0;
@@ -98,7 +104,11 @@ class Duck {
 		return $this;
 	}
 	
-	// unified function gets the one of of the 4 possible states
+	/**
+   * unified function gets the one of of the 4 possible states
+   *
+   * @return int
+   */
 	public function get_features() {
 		if (is_null($this->card)) return self::ONLY;
 		if (get_class($this->card) === 'ActionCard') return self::PROT;

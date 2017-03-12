@@ -587,11 +587,11 @@ class Game {
 					
 					foreach( $this->players as $player ) {
 						if ($player->getColor() == $color_left) {
-							$player->decrease_lives();
+							$player->decreaseLives();
 						}
 						
 						if ($player->getColor() == $color_right) {
-							$player->decrease_lives();
+							$player->decreaseLives();
 						}
 					}
 
@@ -806,6 +806,7 @@ class Game {
 			];
 		}
 		if (!$this->active) {
+		  $state['start'] = ((count($this->players) >= Game::P_MIN) && (count($this->players) <= Game::P_MAX));
 		  return $state;
     }
 		
@@ -919,17 +920,17 @@ class Game {
           throw new \Exception('Color in use');
         }
 
-        $this->players[$user->getId()]->setColor($args['color']);
+        $player_id = $this->get_player_id_by_user_id($user->getId());
+        $this->players[$player_id]->setColor($args['color']);
 
-        $ms->send($user, Message::ok('Color changed'));
-        $ms->sendMany($this->players, new Message('setColor', ['user_id'=>$user->getId(), 'color'=>$args['color']]));
+        $ms->sendMany($this->players, new Message('setColor', ['userId'=>$user->getId(), 'color'=>$args['color']]));
         break;
 
       case 'gameDetails':
         // try obtaining the player_id. Works even if not found (game not started yet)
         $player_id = $this->get_player_id_by_user_id($user->getId());
 
-        $ms->send($user, new Message('ok', ['gameDetails'=>$this->getDetails($player_id)]));
+        $ms->send($user, new Message('gameDetails', $this->getDetails($player_id)));
         break;
 
       case 'gameStart':
@@ -940,9 +941,8 @@ class Game {
           throw new \Exception('Invalid user id');
         }
 
-        $ms->send($user, Message::ok('Game started'));
         foreach($this->players as $player_num => $player) {
-          $ms->send($player, new Message('gameStart', $this->getDetails($player_num)));
+          $ms->send($player, new Message('gameDetails', $this->getDetails($player_num)));
         }
 
         break;
@@ -973,11 +973,11 @@ class Game {
           $this->active=2;
         }
 
-        $gstate = $this->getDetails($player_id);
-        $gstate['messages'] = $ret;
-
-        $ms->send($user, Message::ok('Card played'));
-        $ms->sendMany($this->players, new Message('cardPlay', $gstate));
+        foreach($this->players as $player_num => $player) {
+          $gstate = $this->getDetails($player_num);
+          $gstate['messages'] = $ret;
+          $ms->send($player, new Message('gameDetails', $gstate));
+        }
 
         break;
 
@@ -992,6 +992,15 @@ class Game {
    */
   public function getWaitingUsers() {
     return $this->players;
+  }
+
+  /**
+   * @param int $user_id
+   * @return bool
+   */
+  public function hasPlayerById(int $user_id) {
+    $player_id = $this->get_player_id_by_user_id($user_id);
+    return ($player_id===false)?false:true;
   }
 
   public function addWaitingUser(int $user_id, string $name) {

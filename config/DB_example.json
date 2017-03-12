@@ -4,6 +4,6 @@
   "db": "DB database name",
   "host": "DB host",
   "session_table": "Table name to store sessions using PDOSessionHandler",
-  "session_name": "Session name (arbitrary string)"
-  "ws_uri": "Websocket connection URI",
+  "session_name": "Session name (arbitrary string)",
+  "ws_uri": "Websocket connection URI"
 }

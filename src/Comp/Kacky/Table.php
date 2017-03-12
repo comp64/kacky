@@ -7,7 +7,7 @@ class Table {
    */
 	private $ducksOnBoard;
   /**
-   * @var Queue
+   * @var Stack
    */
 	private $ducksInDeck;
   /**
@@ -36,7 +36,7 @@ class Table {
 	function __construct($players) {
 		$this->cardPile = new Stack();
 		$this->cardTrash = new Stack();
-		$this->ducksInDeck = new Queue();
+		$this->ducksInDeck = new Stack();
 		$this->ducksOnBoard = [];
 		$this->targeted = [];
 		
@@ -48,37 +48,37 @@ class Table {
 		}
 		
 		// add water to the deck
-		for($i = 0; $i < 5; $i ++) {
-			$this->ducksInDeck->add ( new Duck ( - 1 ) );
+		for ($i = 0; $i < 5; $i ++) {
+			$this->ducksInDeck->add(new Duck(Player::COLOR_WATER));
 		}
 		
 		// set default targets to false
-		for($i = 0; $i < 6; $i ++) {
-			$this->targeted [$i] = false;
+		for ($i = 0; $i < 6; $i ++) {
+			$this->targeted[$i] = false;
 		}
-		
-		$allActionCards = array (
-				0 => 1,
-				1 => 1,
-				2 => 1,
-				3 => 1,
-				4 => 1,
-				5 => 2,
-				6 => 2,
-				7 => 2,
-				8 => 2,
-				9 => 2,
-				10 => 3,
-				11 => 3,
-				12 => 3,
-				13 => 6,
-				14 => 10,
-				15 => 12 
-		);
 
-		foreach ( $allActionCards as $id => $num ) {
+    $allActionCards = [
+      0 => 1,
+      1 => 1,
+      2 => 1,
+      3 => 1,
+      4 => 1,
+      5 => 2,
+      6 => 2,
+      7 => 2,
+      8 => 2,
+      9 => 2,
+      10 => 3,
+      11 => 3,
+      12 => 3,
+      13 => 6,
+      14 => 10,
+      15 => 12
+    ];
+
+		foreach ($allActionCards as $id => $num) {
 			for($i = 0; $i < $num; $i ++) {
-				$this->cardPile->push ( new ActionCard ( $id ) );
+				$this->cardPile->push(new ActionCard($id));
 			}
 		}
 	}
@@ -96,24 +96,17 @@ class Table {
 	 * Adds a new duck on the board from the duck deck.
 	 */
 	public function put_duck_on_board() {
-		/*
-		 * if (count ( $this->ducksOnBoard ) != 5) {
-		 * trigger_error ( 'Not 5 ducks on the board' );
-		 * return false;
-		 * }
-		 */
-		 
-		$var = $this->ducksInDeck->get ();
+		$var = $this->ducksInDeck->get();
 		if (is_null($var)) {
 		  $var = new Duck(Player::COLOR_WATER);
 		}
-	  $this->ducksOnBoard [] = $var;
+	  $this->ducksOnBoard[]=$var;
 	}
 	
 	/**
 	 * Returns the ducks in the deck.
 	 *
-	 * @return Queue $ducksInDeck all ducks in the side deck
+	 * @return Stack $ducksInDeck all ducks in the side deck
 	 */
 	public function get_ducks_in_deck() {
 		return $this->ducksInDeck;
@@ -175,43 +168,43 @@ class Table {
 	 */
 	public function remove_duck($idx, $kill) {
 		if ($kill) {
-			if ($this->ducksOnBoard [$idx]->get_card () === null) {
+			if ($this->ducksOnBoard[$idx]->get_card() === null) {
 				// there is only bottom duck to kill and putting new duck on the board
-				$color = $this->ducksOnBoard [$idx]->get_color ();
-				array_splice ( $this->ducksOnBoard, $idx, 1 );
+				$color = $this->ducksOnBoard[$idx]->get_color();
+				array_splice($this->ducksOnBoard, $idx, 1);
 				return $color;
-			} elseif (get_class ( $this->ducksOnBoard [$idx]->get_card () ) === 'ActionCard') {
+			} elseif (get_class($this->ducksOnBoard[$idx]->get_card()) === 'ActionCard') {
 				// do nothing
 				return Player::COLOR_WATER;
-			} elseif (get_class ( $this->ducksOnBoard [$idx]->get_card () ) === 'Duck') {
-				if (get_class ( $this->ducksOnBoard [$idx]->get_card ()->get_card () ) === 'ActionCard') {
+			} elseif (get_class($this->ducksOnBoard[$idx]->get_card()) === 'Duck') {
+				if (get_class($this->ducksOnBoard[$idx]->get_card()->get_card()) === 'ActionCard') {
 					// killing the bottom duck
-					$color = $this->ducksOnBoard [$idx]->get_color ();
-					$this->ducksOnBoard [$idx] = $this->ducksOnBoard [$idx]->get_card ();
+					$color = $this->ducksOnBoard[$idx]->get_color();
+					$this->ducksOnBoard[$idx] = $this->ducksOnBoard[$idx]->get_card();
 					return $color;
 				} else {
 					// killing the top duck
-					$color = $this->ducksOnBoard [$idx]->get_card()->get_color ();
-					$this->ducksOnBoard [$idx]->remove_card ();
+					$color = $this->ducksOnBoard[$idx]->get_card()->get_color();
+					$this->ducksOnBoard[$idx]->remove_card();
 					return $color;
 				}
 			}
 		} else {
-			if (get_class ( $this->ducksOnBoard [$idx]->get_card () ) === 'ActionCard') {
+			if (get_class($this->ducksOnBoard[$idx]->get_card()) === 'ActionCard') {
 				// removing action card on the bottom duck
-				$this->cardTrash->push ( $this->ducksOnBoard [$idx]->remove_card () );
-			} elseif (get_class ( $this->ducksOnBoard [$idx]->get_card () ) === 'Duck') {
-				if (get_class ( $this->ducksOnBoard [$idx]->get_card ()->get_card () ) === 'ActionCard') {
+				$this->cardTrash->push($this->ducksOnBoard[$idx]->remove_card());
+			} elseif (get_class($this->ducksOnBoard[$idx]->get_card()) === 'Duck') {
+				if (get_class($this->ducksOnBoard[$idx]->get_card()->get_card()) === 'ActionCard') {
 					// removing action card on the top duck
-					$this->cardTrash->push ( $this->ducksOnBoard [$idx]->get_card ()->remove_card () );
+					$this->cardTrash->push($this->ducksOnBoard[$idx]->get_card()->remove_card());
 				}
 				// removing the top duck
-				$this->ducksInDeck->add ( $this->ducksOnBoard [$idx]->remove_card ()->reset () );
+				$this->ducksInDeck->add($this->ducksOnBoard[$idx]->remove_card()->reset());
 			}
 			
 			// removing the bottom duck and putting new duck on the board
-			$this->ducksOnBoard [$idx]->reset ();
-			$this->ducksInDeck->add ( array_splice ( $this->ducksOnBoard, $idx, 1 ) [0] );
+			$this->ducksOnBoard[$idx]->reset();
+			$this->ducksInDeck->add(array_splice($this->ducksOnBoard, $idx, 1)[0]);
 		}
 
 		return null;
