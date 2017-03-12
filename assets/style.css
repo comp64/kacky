@@ -156,6 +156,7 @@ div.message-input {
   padding: 2px;
 	border: 2px solid black;
 	width: 292px;
+  margin: 0;
 }
 
 span.has-move {

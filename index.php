@@ -141,7 +141,7 @@ else {
           <!-- text messaging -->
           <div id="message-box" class="message-box"></div>
           <div class="message-input">
-            <input id="message-input" type="text" name="msg-input" value="" placeholder="vylej si srdce&hellip;" disabled="disabled">
+            <input id="message-input" type="text" name="msg-input" value="" placeholder="vylej si srdce&hellip;">
           </div>
 
         </td>

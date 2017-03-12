@@ -948,6 +948,7 @@ class Game {
           throw new \Exception('Invalid user id');
         }
 
+        $ms->sendMany($this->players, new Message('gameStart'));
         foreach($this->players as $player_num => $player) {
           $ms->send($player, new Message('gameDetails', $this->getDetails($player_num)));
         }
@@ -986,6 +987,24 @@ class Game {
           $ms->send($player, new Message('gameDetails', $gstate));
         }
 
+        break;
+
+      case 'chat':
+        if (!strlen($args['text'] ?? '')) {
+          throw new \Exception('Empty message');
+        }
+
+        if ($this->active == 0) {
+          throw new \Exception('Game not started');
+        }
+
+        $player = $this->players[$this->get_player_id_by_user_id($user->getId())];
+        $msg = mb_substr($args['text'], 0, 512, 'UTF-8');
+        $ms->sendMany($this->players,
+          new Message('chat', ['text'=>
+            sprintf('<span class="msg-col%d">%s: %s</span>', $player->getColor(), htmlentities($player->getName(), ENT_COMPAT | ENT_HTML5, 'UTF-8'), htmlentities($msg, ENT_COMPAT | ENT_HTML5, 'UTF-8'))
+          ])
+        );
         break;
 
       default:

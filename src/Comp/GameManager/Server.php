@@ -4,6 +4,7 @@ namespace Comp\GameManager;
 use Ratchet\ConnectionInterface;
 use Ratchet\MessageComponentInterface;
 use Comp\Kacky\Game;
+use Comp\Kacky\Player;
 use Comp\Kacky\Model\User;
 use Comp\Kacky\DB;
 
@@ -97,7 +98,7 @@ class Server implements MessageComponentInterface, GameServer {
       if (($game->getActive() == 0) || ($user->getGameId() == $game_id)) {
         $game_list[$game_id] = [
           'title' => $game->getTitle(),
-          'players' => array_map(function(\Comp\Kacky\Player $x) {
+          'players' => array_map(function(Player $x) {
             return $x->getName();
           }, $game->getWaitingUsers()),
           'active' => ($game->getActive() ? ($game->getActive() > 1 ? 'ukončená' : 'prebieha') : 'pripravená')

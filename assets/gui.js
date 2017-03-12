@@ -1,3 +1,14 @@
+/*TODO:
+ * Glitch pri zahrani karty
+ * zjednotit backend messaging
+ * game server do CRONu
+ * connection status (hraci, hra)
+ * garbage collect starych hier
+ * umoznit opustenie hry
+ * statistiky
+ * sprehladnit (rozumej prerobit) gui kod
+*/
+
 /* Message reference
  * m_cmd - name (params)
  *
@@ -573,6 +584,12 @@ function data_ready(data) {
       case 'gameLeave':
         remove_player(data.args.userId);
         break;
+      case 'gameStart':
+        first_show = true;
+        break;
+      case 'chat':
+        $('#message-box').append('<div>'+data.args.text+'</div>').animate({ scrollTop: $('#message-box')[0].scrollHeight}, 1000);
+        break;
       case 'gameDetails':
         if (data.args.active == 1) {
           switch_game_phase('inGame');
@@ -724,13 +741,13 @@ function process_messages(data) {
   if (!data.messages || (data.messages.constructor !== Array)) return $(null).promise();
 
   for (var i in data.messages) {
+    if (!data.messages.hasOwnProperty(i)) continue;
     var msg=data.messages[i];
 
     switch(msg.cmd) {
       case 100: // Text message
         $('#message-box').append('<div>'+msg.text+'</div>').animate({ scrollTop: $('#message-box')[0].scrollHeight}, 1000);
         break;
-
       case 101: // Action card play (player_id, card_id, river_pos, extras, died_pos)
         if (!msg.self) { // already performed at the initiator
           if (msg.card_id==10) // KACHNI_UNIK
@@ -946,7 +963,8 @@ $(function() {
       var msg = $('#message-input').val();
       if (msg == '') return;
 
-      //TODO: send
+      ws.exec('chat', {text: msg});
+      $('#message-input').val('');
     }
   });
 });
