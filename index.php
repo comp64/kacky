@@ -61,25 +61,17 @@ if (isset($_GET['logout'])) {
 <?php
 if (!$session->get('isLogged', false)) {
   ?>
-  <div class="maincontent">
+  <div class="maincontent" style="width:330px">
     <h2>Kačice z našej police</h2>
     <?php
-    echo '<p>' . implode('<br>', $session->getFlashBag()->get('login_errors')) .'</p>';
+    if (count($session->getFlashBag()->get('login_errors'))) {
+      echo '<p>' . implode('<br>', $session->getFlashBag()->get('login_errors')) . '</p>';
+    }
     ?>
     <form method="post">
-      <table>
-        <tr>
-          <td><label for="uname">Username:</label></td>
-          <td><input id="uname" type="text" name="uname" size="16" value=""></td>
-        </tr>
-        <tr>
-          <td><label for="upass">Password:</label></td>
-          <td><input id="upass" type="password" name="upass" size="16" value=""></td>
-        </tr>
-        <tr>
-          <td colspan="2"><input type="submit" name="lsub" value="Login"></td>
-        </tr>
-      </table>
+      <input id="uname" type="text" name="uname" size="16" value="" placeholder="User name"><br>
+      <input id="upass" type="password" name="upass" size="16" value="" placeholder="Password"><br>
+      <button type="submit" name="lsub">Login</button>
     </form>
   </div>
 <?php
@@ -88,8 +80,10 @@ if (!$session->get('isLogged', false)) {
 else {
 ?>
   <div class="menicko">
-    <a href="?logout=1">Logout</a>&nbsp;&nbsp;
+    <a href="?"><img src="assets/i/duck_logo_flip.png" alt="logo"/></a>
     <a href="javascript:back_to_gameList()">Zoznam hier</a>
+    <a href="?logout=1">Logout</a>&nbsp;&nbsp;
+    <a href="?"><img src="assets/i/duck_logo.png" alt="logo"/></a>
   </div>
 
   <!-- Herna plocha pocas hry -->
@@ -164,9 +158,9 @@ else {
   <div class="maincontent" data-phase="noGame">
     <h2>Kačice z našej police</h2>
     <table class="simple">
-      <thead>
+<!--      <thead>
       <tr><th>id</th><th>Názov</th><th>Hráči</th><th>Stav</th></tr>
-      </thead>
+      </thead>-->
       <tbody id="tb-game-list">
       </tbody>
     </table>

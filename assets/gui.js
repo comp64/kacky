@@ -1,6 +1,7 @@
 /*TODO:
  * Glitch pri zahrani karty
  * zjednotit backend messaging
+ * FB / Google+ login
  * game server do CRONu
  * connection status (hraci, hra)
  * garbage collect starych hier
@@ -547,8 +548,8 @@ function show_game_list(data) {
   for (var game_id in data) {
     if (!data.hasOwnProperty(game_id)) continue;
     var game = data[game_id];
-    var gameline = $('<tr><td class="game-id"></td><td class="game-title"></td><td class="game-players"></td><td class="game-active"></td></tr>');
-    gameline.find('.game-id').text(game_id);
+    var gameline = $('<tr><td class="game-title"></td><td class="game-players"></td><td class="game-active"></td></tr>');
+//    gameline.find('.game-id').text(game_id);
     gameline.find('.game-title').html('<a href="javascript:subscribe('+game_id+')">'+game.title+'</a>');
     gameline.find('.game-players').text(game.players);
     gameline.find('.game-active').text(game.active);
