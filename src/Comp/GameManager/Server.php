@@ -50,6 +50,13 @@ class Server implements MessageComponentInterface, GameServer {
   function onClose(ConnectionInterface $conn) {
     $conn = new Connection($conn);
     $conn_id = $conn->getId();
+    $user = $this->userList[$conn_id];
+
+    foreach($this->gameList as $game) {
+      if ($game->hasPlayerById($user->getId())) {
+        $game->connectionStatusChange($user->getId(), 0, $this);
+      }
+    }
 
     unset($this->userList[$conn_id]);
   }
@@ -88,6 +95,33 @@ class Server implements MessageComponentInterface, GameServer {
     return $user->getId() !== null;
   }
 
+  private function purgeOldGames() {
+    // maximum allowed age in particular game activity states
+    $ageMap = [
+      0 => 1800,
+      1 => 7200,
+      2 => 7200
+    ];
+    $oldGames = [];
+    foreach($this->gameList as $game_id => $game) {
+      if ($game->getAge() > $ageMap[$game->getActive()]) {
+        // GC
+        $oldGames[] = $game_id;
+      }
+    }
+
+    foreach($oldGames as $game_id) {
+      foreach($this->userList as $user) {
+        if ($user->getGameId() === $game_id) {
+          $user->setGameId(null);
+        }
+      }
+
+      $this->sendMany($this->gameList[$game_id]->getWaitingUsers(), new Message('gameClosed', ['gameId'=>$game_id]));
+      unset($this->gameList[$game_id]);
+    }
+  }
+
   /**
    * @param User $user
    * @return array
@@ -95,7 +129,7 @@ class Server implements MessageComponentInterface, GameServer {
   private function gameListing(User $user) {
     $game_list = [];
     foreach ($this->gameList as $game_id => $game) {
-      if (($game->getActive() == 0) || ($user->getGameId() == $game_id)) {
+      if (($game->getActive() == 0) || ($game->hasPlayerById($user->getId()))) {
         $game_list[$game_id] = [
           'title' => $game->getTitle(),
           'players' => array_map(function(Player $x) {
@@ -110,7 +144,7 @@ class Server implements MessageComponentInterface, GameServer {
   }
 
   private function gameJoin(User $user, Game $game) {
-    if ($game->getActive()) {
+    if ($game->getActive() && !$game->hasPlayerById($user->getId())) {
       throw new \Exception('Game already started');
     }
 
@@ -118,12 +152,14 @@ class Server implements MessageComponentInterface, GameServer {
       throw new \Exception('Too many players');
     }
 
-    if ($game->hasPlayerById($user->getId())) {
-      throw new \Exception('Already in game');
-    }
-
     $user->setGameId($game->getId());
-    $game->addWaitingUser($user->getId(), $user->getName());
+
+    if (!$game->hasPlayerById($user->getId())) {
+      $game->addWaitingUser($user->getId(), $user->getName());
+      return true;
+    } else {
+      return false;
+    }
   }
 
   /**
@@ -155,12 +191,18 @@ class Server implements MessageComponentInterface, GameServer {
             $user->verifyFromDB($username, $password);
           }
 
-          // if the user was in a game
-          // put him there directly
-          foreach ($this->gameList as $game_id => $game) {
+          $preferredGameId = $args['gameId'] ?? 0;
+          if (array_key_exists($preferredGameId, $this->gameList)) {
+            $preferredGame = $this->gameList[$preferredGameId];
+            if ($preferredGame->hasPlayerById($user->getId())) {
+              $user->setGameId($preferredGameId);
+            }
+          }
+
+          // notify all concerned games about connected user
+          foreach($this->gameList as $game) {
             if ($game->hasPlayerById($user->getId())) {
-              $user->setGameId($game_id);
-              break;
+              $game->connectionStatusChange($user->getId(), 1, $this);
             }
           }
 
@@ -173,6 +215,7 @@ class Server implements MessageComponentInterface, GameServer {
             throw new NotLoggedInException();
           }
 
+          $this->purgeOldGames();
           $user->send(new Message('gameList', $this->gameListing($user)));
           break;
 
@@ -181,9 +224,9 @@ class Server implements MessageComponentInterface, GameServer {
             throw new NotLoggedInException();
           }
 
-          if ($user->getGameId() !== null) {
-            throw new \Exception('Already in another game');
-          }
+//          if ($user->getGameId() !== null) {
+//            throw new \Exception('Already in another game');
+//          }
 
           if (!array_key_exists('title', $args)) {
             throw new \Exception('Game title required');
@@ -217,20 +260,22 @@ class Server implements MessageComponentInterface, GameServer {
             throw new \Exception('Game id required');
           }
 
-          if (($user->getGameId() !== null) && ($user->getGameId() != $args['gameId'])) {
-            throw new \Exception('Already in another game');
-          }
+//          if (($user->getGameId() !== null) && ($user->getGameId() != $args['gameId'])) {
+//            throw new \Exception('Already in another game');
+//          }
 
           if (!array_key_exists($args['gameId'], $this->gameList)) {
             throw new \Exception('Game id invalid');
           }
 
           $joined_game = $this->gameList[$args['gameId']];
-          $this->gameJoin($user, $joined_game);
+          $ret = $this->gameJoin($user, $joined_game);
 
-          $this->sendMany($joined_game->getWaitingUsers(),
-            new Message('gameJoin', ['userId'=>$user->getId(), 'userName'=>$user->getName()])
-          );
+          if ($ret) {
+            $this->sendMany($joined_game->getWaitingUsers(),
+              new Message('gameJoin', ['userId' => $user->getId(), 'userName' => $user->getName()])
+            );
+          }
           break;
 
         case 'gameLeave':

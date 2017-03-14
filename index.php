@@ -50,7 +50,7 @@ if (isset($_GET['logout'])) {
 <head>
   <meta charset="utf-8">
   <link rel="icon" type="image/png" href="assets/i/duck.png">
-  <link rel="stylesheet" type="text/css" href="assets/style.css">
+  <link rel="stylesheet" type="text/css" href="assets/style.css?v=2">
   <title>Kačice z našej police</title>
   <link rel="stylesheet" href="assets/jquery/jquery-ui.min.css">
   <script src="assets/jquery/jquery-2.1.4.min.js"></script>
@@ -82,9 +82,11 @@ else {
   <div class="menicko">
     <a href="?"><img src="assets/i/duck_logo_flip.png" alt="logo"/></a>
     <a href="javascript:back_to_gameList()">Zoznam hier</a>
-    <a href="?logout=1">Logout</a>&nbsp;&nbsp;
+    <a href="?logout=1">Logout</a>
     <a href="?"><img src="assets/i/duck_logo.png" alt="logo"/></a>
   </div>
+
+  <div id="conn-alert" style="display: none">Pripojenie k serveru zlyhalo. <a id="conn-alert-try" href="javascript:ws_connect()">Skúsiť znova</a></div>
 
   <!-- Herna plocha pocas hry -->
   <div data-phase="inGame" style="display:none">
@@ -158,13 +160,10 @@ else {
   <div class="maincontent" data-phase="noGame">
     <h2>Kačice z našej police</h2>
     <table class="simple">
-<!--      <thead>
-      <tr><th>id</th><th>Názov</th><th>Hráči</th><th>Stav</th></tr>
-      </thead>-->
       <tbody id="tb-game-list">
       </tbody>
     </table>
-    <br><button type="button" onclick="game_new()">Nová hra</button>
+    <br><button id="btNew" type="button" onclick="game_new()" style="display:none">Nová hra</button>
   </div>
 
   <script>
@@ -172,7 +171,7 @@ else {
     var ws_uri = '<?= $dbConfig['ws_uri'] ?>';
   </script>
   <!-- javascript gui functionality -->
-  <script src="assets/gui.js"></script>
+  <script src="assets/gui.js?v=5"></script>
 
   <?php
 }

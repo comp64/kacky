@@ -3,9 +3,7 @@
  * zjednotit backend messaging
  * FB / Google+ login
  * game server do CRONu
- * connection status (hraci, hra)
- * garbage collect starych hier
- * umoznit opustenie hry
+ * connection quality checking (ping/pong)
  * statistiky
  * sprehladnit (rozumej prerobit) gui kod
 */
@@ -41,11 +39,13 @@ var colors = {
 };
 
 function subscribe(gameId) {
+  window.gid = gameId;
   ws.exec('gameJoin', {
     gameId: gameId
   });
   switch_game_phase('beforeGame');
   ws.exec('gameDetails');
+  ws.exec('chatLoad');
   window.history.pushState(null, '', '?gid='+gameId);
 }
 
@@ -588,6 +588,16 @@ function data_ready(data) {
       case 'gameStart':
         first_show = true;
         break;
+      case 'chatLoad':
+        $('#message-box').empty();
+        for(var i in data.args) {
+          if (!data.args.hasOwnProperty(i)) continue;
+          $('#message-box').append('<div>'+data.args[i]+'</div>');
+        }
+        $('#message-box').animate({
+          scrollTop: $('#message-box')[0].scrollHeight
+        }, 1000);
+        break;
       case 'chat':
         $('#message-box').append('<div>'+data.args.text+'</div>').animate({ scrollTop: $('#message-box')[0].scrollHeight}, 1000);
         break;
@@ -921,8 +931,48 @@ function switch_game_phase(phase) {
   $('[data-phase="'+phase+'"]').show();
 }
 
+function ws_connect() {
+  $('#conn-alert').slideUp();
+  var timeout = setTimeout(function() {
+    $('#conn-alert').slideDown();
+  }, 2000);
+
+  window.ws = new WebSocket(window.ws_uri);
+  ws.onmessage = function(msg) {
+    data_ready(JSON.parse(msg.data));
+  };
+
+  ws.onclose = function() {
+    $('#conn-alert').slideDown();
+    cleanup_click_handlers();
+    window.gid = 0;
+    switch_game_phase('noGame');
+    window.history.pushState(null, '', '?');
+    $('#btNew').hide();
+  };
+
+  ws.onopen = function() {
+    clearTimeout(timeout);
+    $('#conn-alert').slideUp();
+    $('#btNew').show();
+
+    ws.exec('authenticate', {
+      gameId: gid
+    });
+    if (gid == 0) {
+      switch_game_phase('noGame');
+      ws.exec('gameList');
+    } else {
+      switch_game_phase('beforeGame');
+      ws.exec('gameDetails');
+      ws.exec('chatLoad');
+    }
+  };
+}
+
 $(function() {
   WebSocket.prototype.exec = function(cmd, args) {
+    if (this.readyState != 1) return;
     var data = {cmd: cmd};
 
     if (args !== undefined) {
@@ -932,27 +982,7 @@ $(function() {
     this.send(JSON.stringify(data));
   };
 
-  window.ws = new WebSocket(ws_uri);
-  ws.onmessage = function(msg) {
-    data_ready(JSON.parse(msg.data));
-  };
-
-  ws.onclose = function() {
-    console.log('connection closed');
-  };
-
-  ws.onopen = function() {
-    ws.exec('authenticate');
-    if (gid == 0) {
-      ws.exec('gameList');
-    } else {
-      ws.exec('gameDetails');
-    }
-  };
-
-  if (gid > 0) {
-    switch_game_phase("beforeGame");
-  }
+  ws_connect();
 
   // scroll to the bottom
   $('#message-box').scrollTop($('#message-box')[0].scrollHeight);

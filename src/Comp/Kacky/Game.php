@@ -45,6 +45,11 @@ class Game {
 	// is game over?
 	private $gameOver;
 
+	/**
+	 * @var string[]
+	 */
+	private $chatMessages;
+
 	const P_MIN = 2;
 	const P_MAX = 6;
 	
@@ -58,6 +63,7 @@ class Game {
     $this->timestamp = time();
 		$this->players = [];
 		$this->gameOver = false;
+		$this->chatMessages = [];
   }
 
   public function start() {
@@ -906,6 +912,9 @@ class Game {
 	}
 
 	public function processMessage(ObjectWithId $user, string $cmd, array $args, GameServer $ms) {
+	  // bump game timestamp
+    $this->timestamp = time();
+
 	  switch($cmd) {
       case 'setColor':
         if (!array_key_exists('color', $args)) {
@@ -977,6 +986,13 @@ class Game {
           throw new \Exception('Game::play() returned false');
         }
 
+        // put new chat messages into archive
+        foreach($ret as $message) {
+          if ($message['cmd'] == 100) {
+            $this->chatMessages[] = $message['text'];
+          }
+        }
+
         if ($this->is_gameover()) {
           $this->active=2;
         }
@@ -987,6 +1003,10 @@ class Game {
           $ms->send($player, new Message('gameDetails', $gstate));
         }
 
+        break;
+
+      case 'chatLoad': // load all previous chat messages
+        $ms->send($user, new Message('chatLoad', $this->chatMessages));
         break;
 
       case 'chat':
@@ -1000,11 +1020,9 @@ class Game {
 
         $player = $this->players[$this->get_player_id_by_user_id($user->getId())];
         $msg = mb_substr($args['text'], 0, 512, 'UTF-8');
-        $ms->sendMany($this->players,
-          new Message('chat', ['text'=>
-            sprintf('<span class="msg-col%d">%s: %s</span>', $player->getColor(), htmlentities($player->getName(), ENT_COMPAT | ENT_HTML5, 'UTF-8'), htmlentities($msg, ENT_COMPAT | ENT_HTML5, 'UTF-8'))
-          ])
-        );
+        $wholeMsg = sprintf('<span class="msg-col%d">%s: %s</span>', $player->getColor(), htmlentities($player->getName(), ENT_COMPAT | ENT_HTML5, 'UTF-8'), htmlentities($msg, ENT_COMPAT | ENT_HTML5, 'UTF-8'));
+        $this->chatMessages[] = $wholeMsg;
+        $ms->sendMany($this->players, new Message('chat', ['text'=> $wholeMsg]));
         break;
 
       default:
@@ -1040,6 +1058,19 @@ class Game {
     }
   }
 
+  public function connectionStatusChange(int $user_id, int $status, GameServer $ms) {
+    $statusMap = [
+      0=>'DISCONNECT: %s je OFFLINE',
+      1=>'CONNECT: %s je ONLINE'
+    ];
+    $player_id = $this->get_player_id_by_user_id($user_id);
+    if ($player_id !== false) {
+      $msg = sprintf('<span class="msg-sys0">'.$statusMap[$status].'</span>', $this->players[$player_id]->getName());
+      $this->chatMessages[] = $msg;
+      $ms->sendMany($this->players, new Message('chat', ['text'=>$msg]));
+    }
+  }
+
   /**
    * @return int
    */
@@ -1072,5 +1103,13 @@ class Game {
     return sprintf("Game: [id: %d, title: %s, active: %d, activePlayer: %d, over: %d, players:\n%s]\n", $this->id,
       $this->title, $this->active, $this->activePlayer, $this->gameOver?1:0, implode("", $this->players)
     );
+  }
+
+  /**
+   * Time in seconds since last interaction with this game
+   * @return int
+   */
+  public function getAge() {
+    return time() - $this->timestamp;
   }
 }
