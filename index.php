@@ -58,6 +58,16 @@ if (isset($_GET['logout'])) {
   <script src="assets/jquery/jquery.ui.touch-punch.min.js"></script>
 </head>
 <body>
+<!-- FB login support code -->
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+    var js, fjs = d.getElementsByTagName(s)[0];
+    if (d.getElementById(id)) return;
+    js = d.createElement(s); js.id = id;
+    js.src = "//connect.facebook.net/sk_SK/sdk.js#xfbml=1&version=v2.8&appId=1833022813615910";
+    fjs.parentNode.insertBefore(js, fjs);
+  }(document, 'script', 'facebook-jssdk'));</script>
+<!-- End of FB login support code -->
 <?php
 if (!$session->get('isLogged', false)) {
   ?>
@@ -73,6 +83,8 @@ if (!$session->get('isLogged', false)) {
       <input id="upass" type="password" name="upass" size="16" value="" placeholder="Password"><br>
       <button type="submit" name="lsub">Login</button>
     </form>
+    <hr>
+    <div class="fb-login-button" data-max-rows="0" data-size="large" data-show-faces="false" data-auto-logout-link="false"></div>
   </div>
 <?php
 }

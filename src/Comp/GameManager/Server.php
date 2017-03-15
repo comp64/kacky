@@ -51,10 +51,13 @@ class Server implements MessageComponentInterface, GameServer {
     $conn = new Connection($conn);
     $conn_id = $conn->getId();
     $user = $this->userList[$conn_id];
+    $user_id = $user->getId();
 
-    foreach($this->gameList as $game) {
-      if ($game->hasPlayerById($user->getId())) {
-        $game->connectionStatusChange($user->getId(), 0, $this);
+    if ($user_id !== null) {
+      foreach ($this->gameList as $game) {
+        if ($game->hasPlayerById($user_id)) {
+          $game->connectionStatusChange($user_id, 0, $this);
+        }
       }
     }
 
