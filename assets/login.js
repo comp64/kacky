@@ -38,11 +38,13 @@ function initGLogin() {
 function submitGLogin() {
   $('#loginButton').replaceWith('<button>Please wait&hellip;</button>');
 
-  $.post('index.php', {
-    login: 'google',
-    token: gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().id_token
-  }, function() {
-    window.location.replace('?');
+  gapi.auth2.getAuthInstance().signIn().then(function() {
+    $.post('index.php', {
+      login: 'google',
+      token: gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().id_token
+    }, function() {
+      window.location.replace('?');
+    });
   });
 }
 
