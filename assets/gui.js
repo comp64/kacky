@@ -836,7 +836,7 @@ function process_messages(data) {
 }
 
 function append_player(p) {
-  var line=$('<tr data-id="p_'+p.id+'"><td><b>'+p.name+'</b> </td></tr>');
+  var line=$('<tr data-id="p_'+p.id+'"><td><b>'+p.name+'</b>&nbsp;&nbsp;</td></tr>');
   var tmp1=$('<td></td>');
   var sel=$('<select name="s_color" data-user="'+p.id+'" onchange="set_color(this)"></select>');
   var opt;
@@ -970,7 +970,10 @@ function ws_connect() {
   };
 }
 
-$(function() {
+function gui_start(gid, ws_uri) {
+  window.gid = gid;
+  window.ws_uri = ws_uri;
+
   WebSocket.prototype.exec = function(cmd, args) {
     if (this.readyState != 1) return;
     var data = {cmd: cmd};
@@ -998,4 +1001,4 @@ $(function() {
       $('#message-input').val('');
     }
   });
-});
+}

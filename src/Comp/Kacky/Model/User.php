@@ -33,12 +33,18 @@ class User implements ObjectWithId {
   private $game_id;
 
   /**
+   * @var string
+   */
+  private $foreign_id;
+
+  /**
    * User constructor.
    * @param Connection $socket
    */
   public function __construct(Connection $socket=null) {
     $this->socket = $socket;
     $this->game_id = null;
+    $this->foreign_id = null;
   }
 
   public function __destruct() {
@@ -58,12 +64,45 @@ class User implements ObjectWithId {
     }
   }
 
+  public function verifyFacebook(string $token) {
+    $data = file_get_contents('https://graph.facebook.com/me?access_token='.$token);
+    $user_data = json_decode($data, true);
+    if (($user_data === null) || !array_key_exists('id', $user_data)) {
+      throw new \Exception('Invalid Facebook access token');
+    }
+    $this->loadFromDB(null, null, 'F'.$user_data['id']);
+    if ($this->getId() === null) {
+      $username = explode(' ', $user_data['name'], 2);
+      $this->name = $username[0];
+      $this->foreign_id = 'F'.$user_data['id'];
+      $this->passhash = '!';
+      $this->saveToDB();
+    }
+  }
+
+  public function verifyGoogle(string $token) {
+    $data = file_get_contents('https://www.googleapis.com/oauth2/v3/tokeninfo?id_token='.$token);
+    $user_data = json_decode($data, true);
+    if (($user_data === null) || !array_key_exists('sub', $user_data)) {
+      throw new \Exception('Invalid Google access token');
+    }
+    $this->loadFromDB(null, null, 'G'.$user_data['sub']);
+    if ($this->getId() === null) {
+      $username = $user_data['given_name'];
+      $this->name = $username;
+      $this->foreign_id = 'G'.$user_data['sub'];
+      $this->passhash = '!';
+      $this->saveToDB();
+    }
+  }
+
   /**
    * @param int $id
    * @param string $name
+   * @param string $foreign_id
    * @return boolean
    */
-  public function loadFromDB(int $id=null, string $name=null) {
+  public function loadFromDB(int $id=null, string $name=null, string $foreign_id=null) {
     if ($id !== null) {
       $row = DB::getInstance()->getrow(
         "SELECT u_id, u_name, u_pass
@@ -71,12 +110,19 @@ class User implements ObjectWithId {
       WHERE u_id=?",
         ['i', $id]
       );
-    } else {
+    } elseif ($name !== null) {
       $row = DB::getInstance()->getrow(
         "SELECT u_id, u_name, u_pass
       FROM `user`
       WHERE u_name=?",
         ['s', $name]
+      );
+    } else {
+      $row = DB::getInstance()->getrow(
+        "SELECT u_id, u_name, u_pass
+      FROM `user`
+      WHERE u_foreign_id=?",
+        ['s', $foreign_id]
       );
     }
 
@@ -90,6 +136,18 @@ class User implements ObjectWithId {
       $this->id = null;
 
       return false;
+    }
+  }
+
+  private function saveToDB() {
+    $db = DB::getInstance();
+    if ($this->id === null) {
+      $db->q(
+        "INSERT INTO `user`
+        SET u_name=?, u_pass=?, u_foreign_id=?",
+        ['sss', $this->name, $this->passhash, $this->foreign_id]
+      );
+      $this->id = $db->insert_id;
     }
   }
 

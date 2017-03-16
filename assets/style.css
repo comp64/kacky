@@ -292,3 +292,30 @@ button, input[type=submit]{
   border: 1px solid #148cbc;
   border-radius: 3px;
 }
+
+button.button-fb {
+  color: #fff;
+  background-color: #3b5998;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  vertical-align: middle;
+  width: 266px;
+  text-align: left;
+}
+
+button.button-g {
+  color: rgba(0,0,0,.54);
+  background-color: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  vertical-align: middle;
+  width: 266px;
+  text-align: left;
+}
+
+button span {
+  margin-left: 14px;
+}
+
+button img {
+  display:inline-block;
+  vertical-align: middle;
+}

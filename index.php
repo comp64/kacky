@@ -1,6 +1,7 @@
 <?php
 use Comp\Kacky\DB;
 use Comp\Kacky\Model\User;
+use Comp\GameManager\Message;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\HttpFoundation\Session\Storage\Handler\PdoSessionHandler;
 use Symfony\Component\HttpFoundation\Session\Storage\NativeSessionStorage;
@@ -21,28 +22,43 @@ function redirect($url) {
 }
 
 // handle login form submission
-if (isset($_POST['lsub'])) {
+if (isset($_POST['login'])) {
+  header('Content-Type: application/json');
   $user = new User(null);
-  $username = substr($_POST['uname'], 0, 16);
-  $password = substr($_POST['upass'], 0, 16);
   try {
-    $user->verifyFromDB($username, $password);
+    switch($_POST['login']) {
+      case 'form':
+        $username = substr($_POST['uname'], 0, 16);
+        $password = substr($_POST['upass'], 0, 16);
+        $user->verifyFromDB($username, $password);
+        break;
+
+      case 'facebook':
+        $user->verifyFacebook($_POST['token']);
+        break;
+
+      case 'google':
+        $user->verifyGoogle($_POST['token']);
+        break;
+    }
     $session->set('isLogged', true);
-    $session->set('username', $username);
+    $session->set('username', $user->getName());
     $session->set('userId', $user->getId());
-    redirect('?');
-  } catch (\Exception $e) {
+    echo Message::ok('Logged in');
+  }
+  catch (\Exception $e) {
     $session->set('isLogged', false);
-    $session->getFlashBag()->add('login_errors', $e->getMessage());
+    echo Message::error($e->getMessage());
     sleep(3);
   }
+  exit();
 }
 
 // handle logout
-if (isset($_GET['logout'])) {
+if (isset($_POST['logout'])) {
   $session->clear();
   $session->set('isLogged', false);
-  redirect('?');
+  exit();
 }
 
 ?><!DOCTYPE html>
@@ -56,6 +72,9 @@ if (isset($_GET['logout'])) {
   <script src="assets/jquery/jquery-2.1.4.min.js"></script>
   <script src="assets/jquery/jquery-ui.min.js"></script>
   <script src="assets/jquery/jquery.ui.touch-punch.min.js"></script>
+  <script src="https://apis.google.com/js/platform.js?onload=initGLogin" async defer></script>
+  <script src="assets/login.js"></script>
+  <script src="assets/gui.js"></script>
 </head>
 <body>
 <!-- FB login support code -->
@@ -79,12 +98,13 @@ if (!$session->get('isLogged', false)) {
     }
     ?>
     <form method="post">
-      <input id="uname" type="text" name="uname" size="16" value="" placeholder="User name"><br>
-      <input id="upass" type="password" name="upass" size="16" value="" placeholder="Password"><br>
-      <button type="submit" name="lsub">Login</button>
+      <input id="uname" type="text" name="uname" size="16" value="" placeholder="Prihlasovacie meno"><br>
+      <input id="upass" type="password" name="upass" size="16" value="" placeholder="Heslo"><br>
+      <button id="loginButton" type="button" name="lsub" onclick="submitFormLogin()">Prihlásiť sa</button>
     </form>
     <hr>
-    <div class="fb-login-button" data-max-rows="0" data-size="large" data-show-faces="false" data-auto-logout-link="false"></div>
+    <button type="button" class="button-fb" onclick="submitFBLogin()"><img src="assets/i/fb-logo.png" alt="f-logo"/><span>Facebook prihlásenie</span></button>
+    <button type="button" class="button-g" onclick="submitGLogin()"><img src="assets/i/g-logo.svg" alt="g-logo"/><span>Google+ prihlásenie</span></button>
   </div>
 <?php
 }
@@ -92,9 +112,9 @@ if (!$session->get('isLogged', false)) {
 else {
 ?>
   <div class="menicko">
-    <a href="?"><img src="assets/i/duck_logo_flip.png" alt="logo"/></a>
+    <a href="?"><img src="assets/i/duck_logo_flip.png" alt="logo"/> <?= $session->get('username') ?></a>
     <a href="javascript:back_to_gameList()">Zoznam hier</a>
-    <a href="?logout=1">Logout</a>
+    <a href="javascript:logout()">Logout</a>
     <a href="?"><img src="assets/i/duck_logo.png" alt="logo"/></a>
   </div>
 
@@ -179,12 +199,10 @@ else {
   </div>
 
   <script>
-    var gid = <?= $gameId ?>;
-    var ws_uri = '<?= $dbConfig['ws_uri'] ?>';
+    $(function() {
+      gui_start(<?= $gameId ?>, '<?= $dbConfig['ws_uri'] ?>');
+    });
   </script>
-  <!-- javascript gui functionality -->
-  <script src="assets/gui.js?v=5"></script>
-
   <?php
 }
 ?>
