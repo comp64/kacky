@@ -66,15 +66,15 @@ if (isset($_POST['logout'])) {
 <head>
   <meta charset="utf-8">
   <link rel="icon" type="image/png" href="assets/i/duck.png">
-  <link rel="stylesheet" type="text/css" href="assets/style.css?v=2">
+  <link rel="stylesheet" type="text/css" href="assets/style.css?v=3">
   <title>Kačice z našej police</title>
   <link rel="stylesheet" href="assets/jquery/jquery-ui.min.css">
   <script src="assets/jquery/jquery-2.1.4.min.js"></script>
   <script src="assets/jquery/jquery-ui.min.js"></script>
   <script src="assets/jquery/jquery.ui.touch-punch.min.js"></script>
   <script src="https://apis.google.com/js/platform.js?onload=initGLogin" async defer></script>
-  <script src="assets/login.js"></script>
-  <script src="assets/gui.js"></script>
+  <script src="assets/login.js?v=1"></script>
+  <script src="assets/gui.js?v=7"></script>
 </head>
 <body>
 <!-- FB login support code -->
@@ -90,7 +90,7 @@ if (isset($_POST['logout'])) {
 <?php
 if (!$session->get('isLogged', false)) {
   ?>
-  <div class="maincontent" style="width:330px">
+  <div class="maincontent" style="width:266px">
     <h2>Kačice z našej police</h2>
     <?php
     if (count($session->getFlashBag()->get('login_errors'))) {
@@ -100,7 +100,7 @@ if (!$session->get('isLogged', false)) {
     <form method="post">
       <input id="uname" type="text" name="uname" size="16" value="" placeholder="Prihlasovacie meno"><br>
       <input id="upass" type="password" name="upass" size="16" value="" placeholder="Heslo"><br>
-      <button id="loginButton" type="button" name="lsub" onclick="submitFormLogin()">Prihlásiť sa</button>
+      <button id="loginButton" type="button" name="lsub" style="width: 266px" onclick="submitFormLogin()">Prihlásiť sa</button>
     </form>
     <hr>
     <button type="button" class="button-fb" onclick="submitFBLogin()"><img src="assets/i/fb-logo.png" alt="f-logo"/><span>Facebook prihlásenie</span></button>
