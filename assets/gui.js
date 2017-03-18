@@ -1,7 +1,6 @@
 /*TODO:
  * Glitch pri zahrani karty
  * zjednotit backend messaging
- * FB / Google+ login
  * game server do CRONu
  * connection quality checking (ping/pong)
  * statistiky
@@ -373,7 +372,6 @@ function card_hide(src, dst, new_duck) {
     dst_obj.removeClass('duck-prot').addClass('duck-duckprot').prepend($(resolve_card_contents('d_'+miniduck)).html());
   }
 
-  // this function hereby promises to resolve this deferred object as soon as the last animation is over. Signed in Malmo, 14.8.2015
   return $.when(defer1.promise(), anim2);
 }
 
@@ -423,10 +421,8 @@ function return_first_duck(new_duck) {
 // perform DIVOKEJ_BILL, VYSTRELIT, JEJDA_VEDLE, (part of) DVOJITA_TREFA
 // features contains info about hidden ducks / protection
 function kill_duck(position, new_duck) {
-  features = get_duck_features(position);
-
+  var features = get_duck_features(position);
   var defer=$.Deferred();
-
   var src_obj=$(resolve_css_selector('r'+position));
 
   if (features>=2) { // Duck::DUCK -> create duck underneath; Duck::DUCK_PROT -> create PROT underneath
@@ -456,7 +452,6 @@ function kill_duck(position, new_duck) {
     }
   });
 
-  // this function hereby promises to resolve this deferred object as soon as the last animation is over. Signed in Malmo, 14.8.2015
   return defer.promise();
 }
 
@@ -478,7 +473,6 @@ function return_all_ducks(new_duck) {
     defer.push($.Deferred());
     tmp(i);
   }
-  // this function hereby promises to resolve this deferred object as soon as the last animation is over. Signed in Malmo, 14.8.2015
   return $.when.apply($, defer);
 }
 
@@ -913,7 +907,7 @@ function add_click_handlers(data) {
 
           rosambo_play(current_card.index());
         });
-      } else { // 2-klikove karty ZIVY_STIT
+      } else { // 2-klikove karty ZIVY_STIT, JEJDA_VEDLE
         if (first_click[i]) $('#river div:eq('+i+')').addClass('possible_move').click(function(e){
           card_select($(this), second_click[$(this).index()], current_card.index());
         });

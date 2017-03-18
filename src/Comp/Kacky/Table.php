@@ -30,8 +30,7 @@ class Table {
 	/**
 	 * creates the instance of the board with initial values depending on the number of players
 	 *
-	 * @param Player[] $players
-	 *        	who participate in the game
+	 * @param Player[] $players 	who participate in the game
 	 */
 	function __construct($players) {
 		$this->cardPile = new Stack();
@@ -122,7 +121,7 @@ class Table {
 	}
 	
 	public function set_card_trash() {
-		$this->cardTrash = new Stack ();
+		$this->cardTrash = new Stack();
 	}
 	
 	/**
@@ -142,7 +141,7 @@ class Table {
 	 * @return bool true if the position on this board is targeted
 	 */
 	public function is_targeted($idx) {
-		return $this->targeted [$idx];
+		return $this->targeted[$idx];
 	}
 	
 	/**
@@ -154,7 +153,7 @@ class Table {
 	 *        	to target or detarget this position
 	 */
 	public function set_target($idx, $bool) {
-		$this->targeted [$idx] = $bool;
+		$this->targeted[$idx] = $bool;
 	}
 	
 	/**
@@ -219,9 +218,9 @@ class Table {
 	 *        	the index of the first duck to switch
 	 */
 	public function swap_ducks($idx1, $idx2) {
-		$temp = $this->ducksOnBoard [$idx1];
-		$this->ducksOnBoard [$idx1] = $this->ducksOnBoard [$idx2];
-		$this->ducksOnBoard [$idx2] = $temp;
+		$temp = $this->ducksOnBoard[$idx1];
+		$this->ducksOnBoard[$idx1] = $this->ducksOnBoard[$idx2];
+		$this->ducksOnBoard[$idx2] = $temp;
 	}
 	
 	/**
@@ -231,10 +230,10 @@ class Table {
 	 *        	permutation of the ducks
 	 */
 	public function reorder_ducks($permutation) {
-		$reorderedDucks = array ();
+		$reorderedDucks = [];
 		
-		foreach ( $permutation as $val ) {
-			$reorderedDucks [] = $this->ducksOnBoard [$val];
+		foreach ($permutation as $val) {
+			$reorderedDucks[] = $this->ducksOnBoard[$val];
 		}
 
 		$this->ducksOnBoard = $reorderedDucks;
@@ -245,7 +244,7 @@ class Table {
 	 */
 	public function deal_ducks() {
 		for($i = 0; $i < 6; $i ++) {
-			$this->ducksOnBoard [] = $this->ducksInDeck->get ();
+			$this->ducksOnBoard[] = $this->ducksInDeck->get();
 		}
 	}
 	
@@ -254,7 +253,7 @@ class Table {
 	 */
 	public function collect_ducks() {
 		for($i = 5; $i >= 0; $i --) {
-			$this->remove_duck ( $i, false );
+			$this->remove_duck($i, false);
 		}
 	}
 	
@@ -269,11 +268,11 @@ class Table {
    * @return bool
 	 */
 	public function put_card_on_duck($idx, $card, $prot) {
-		if (is_null($this->ducksOnBoard [$idx]->get_card ())) {
-			$this->ducksOnBoard [$idx]->set_protection ( $card, $prot );
+		if (is_null($this->ducksOnBoard[$idx]->get_card())) {
+			$this->ducksOnBoard[$idx]->set_protection($card, $prot);
 			return true;
-		} elseif (get_class ( $this->ducksOnBoard [$idx]->get_card () ) === 'Comp\Kacky\Duck' && get_class ( $card ) === 'Comp\Kacky\ActionCard') {
-			$this->ducksOnBoard [$idx]->get_card ()->set_protection ( $card, $prot );
+		} elseif (get_class($this->ducksOnBoard[$idx]->get_card()) === 'Comp\Kacky\Duck' && get_class($card) === 'Comp\Kacky\ActionCard') {
+			$this->ducksOnBoard[$idx]->get_card()->set_protection($card, $prot);
 			return true;
 		}
 		
@@ -282,7 +281,7 @@ class Table {
 	}
 	
 	public function delete_duck_from_board($idx) {
-		return array_splice ( $this->ducksOnBoard, $idx, 1 ) [0];
+		return array_splice($this->ducksOnBoard, $idx, 1)[0];
 	}
 }
 ?>
